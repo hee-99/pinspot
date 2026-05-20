@@ -171,15 +171,21 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   }
 
   Future<void> _submit() async {
-    if (_titleCtrl.text.trim().isEmpty || _selectedCategory.isEmpty) return;
+    final title = _titleCtrl.text.trim();
+    final desc = _descCtrl.text.trim();
+
+    if (title.isEmpty || _selectedCategory.isEmpty) return;
     if (_pinLat == null || _pinLng == null) return;
+    if (title.length > 50 || desc.length > 500) return;
+    if (!_isValidLatLng(_pinLat!, _pinLng!)) return;
+
     setState(() => _isSubmitting = true);
 
     final pin = PinModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleCtrl.text.trim(),
+      title: title,
       category: _selectedCategory,
-      description: _descCtrl.text.trim(),
+      description: desc,
       lat: _pinLat!,
       lng: _pinLng!,
       photoPath: kIsWeb ? null : _pickedFile?.path,
@@ -191,6 +197,9 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 
     if (mounted) setState(() { _isSubmitting = false; _step = 3; });
   }
+
+  bool _isValidLatLng(double lat, double lng) =>
+      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
   @override
   Widget build(BuildContext context) {
@@ -669,6 +678,7 @@ class _InputStepState extends State<_InputStep> {
           const SizedBox(height: 8),
           TextField(
             controller: widget.titleCtrl,
+            maxLength: 50,
             decoration: InputDecoration(
               hintText: '예: 북한산 백운대 정상',
               hintStyle: const TextStyle(color: AppTheme.textSecondary),
@@ -695,6 +705,7 @@ class _InputStepState extends State<_InputStep> {
           TextField(
             controller: widget.descCtrl,
             maxLines: 4,
+            maxLength: 500,
             decoration: InputDecoration(
               hintText: '이 장소에 대해 자유롭게 설명해주세요.',
               hintStyle: const TextStyle(color: AppTheme.textSecondary),

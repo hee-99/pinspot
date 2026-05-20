@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../feed/screens/feed_screen.dart';
 import '../../map/screens/map_screen.dart';
@@ -19,13 +20,43 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _screens = [
     FeedScreen(),
     MapScreen(),
-    SizedBox.shrink(), // 가운데 핀 추가 버튼 자리 (탭 전환 없음)
+    SizedBox.shrink(),
     CommunityScreen(),
     ProfileScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _checkPrivacyNotice();
+  }
+
+  Future<void> _checkPrivacyNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    final accepted = prefs.getBool('privacy_accepted') ?? false;
+    if (!accepted && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showPrivacyNotice());
+    }
+  }
+
+  void _showPrivacyNotice() {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PrivacyNoticeSheet(
+        onAccept: () async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('privacy_accepted', true);
+          if (mounted) Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
   void _onTabTapped(int index) {
-    if (index == 2) return; // 가운데 버튼은 FAB으로 처리
+    if (index == 2) return;
     setState(() => _currentIndex = index);
   }
 
@@ -150,3 +181,60 @@ class _NavItem extends StatelessWidget {
   }
 }
 
+class _PrivacyNoticeSheet extends StatelessWidget {
+  final VoidCallback onAccept;
+  const _PrivacyNoticeSheet({required this.onAccept});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.privacy_tip_outlined, color: AppTheme.primary),
+                SizedBox(width: 10),
+                Text('개인정보 처리 안내',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '핀스팟은 아래 정보를 수집합니다:\n\n'
+              '• 위치 정보: 핀 등록 및 지도 표시에 사용\n'
+              '• 사진: 핀 등록 시 첨부 (기기에만 저장)\n'
+              '• 핀 데이터: 기기 내부 저장소에만 보관\n\n'
+              '수집된 정보는 외부 서버로 전송되지 않으며,\n'
+              '앱 삭제 시 모든 데이터가 함께 삭제됩니다.',
+              style: TextStyle(fontSize: 13, height: 1.7, color: Color(0xFF555555)),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: onAccept,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: const Text('확인했어요',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

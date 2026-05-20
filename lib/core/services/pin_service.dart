@@ -12,7 +12,9 @@ class PinService {
     return raw
         .map((e) {
           try {
-            return PinModel.fromJson(json.decode(e) as Map<String, dynamic>);
+            final pin = PinModel.fromJson(json.decode(e) as Map<String, dynamic>);
+            if (pin.lat < -90 || pin.lat > 90 || pin.lng < -180 || pin.lng > 180) return null;
+            return pin;
           } catch (_) {
             return null;
           }
