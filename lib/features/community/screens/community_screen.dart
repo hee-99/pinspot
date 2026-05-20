@@ -15,6 +15,8 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> {
   List<CommunityModel> _communities = [];
   bool _loading = true;
+  String _searchQuery = '';
+  final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -22,15 +24,28 @@ class _CommunityScreenState extends State<CommunityScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final list = await CommunityService.getCommunities();
     if (mounted) setState(() { _communities = list; _loading = false; });
   }
 
-  List<CommunityModel> get _joined => _communities.where((c) => c.isJoined).toList();
-  // 비공개 커뮤니티는 둘러보기에 노출하지 않음
+  bool _matches(CommunityModel c) {
+    if (_searchQuery.isEmpty) return true;
+    final q = _searchQuery.toLowerCase();
+    return c.name.toLowerCase().contains(q) || c.description.toLowerCase().contains(q);
+  }
+
+  List<CommunityModel> get _joined =>
+      _communities.where((c) => c.isJoined && _matches(c)).toList();
+
   List<CommunityModel> get _explore =>
-      _communities.where((c) => !c.isJoined && !c.isPrivate).toList();
+      _communities.where((c) => !c.isJoined && !c.isPrivate && _matches(c)).toList();
 
   Future<void> _openCreate() async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCommunityScreen()));
@@ -182,6 +197,46 @@ class _CommunityScreenState extends State<CommunityScreen> {
               color: AppTheme.primary,
               child: CustomScrollView(
                 slivers: [
+                  // 검색바
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                      child: SearchBar(
+                        controller: _searchCtrl,
+                        hintText: '커뮤니티 이름, 설명 검색',
+                        leading: const Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+                        trailing: _searchQuery.isNotEmpty
+                            ? [GestureDetector(
+                                onTap: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
+                                child: const Icon(Icons.close, color: AppTheme.textSecondary, size: 18),
+                              )]
+                            : null,
+                        backgroundColor: WidgetStateProperty.all(AppTheme.surface),
+                        elevation: WidgetStateProperty.all(1),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (v) => setState(() => _searchQuery = v),
+                      ),
+                    ),
+                  ),
+
+                  // 검색 결과 없음
+                  if (_searchQuery.isNotEmpty && _joined.isEmpty && _explore.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 60),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.search_off, size: 48, color: AppTheme.textSecondary),
+                            const SizedBox(height: 12),
+                            Text('"$_searchQuery" 검색 결과가 없어요',
+                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   // 내 커뮤니티
                   if (_joined.isNotEmpty) ...[
                     _SectionHeader(title: '내 커뮤니티', count: _joined.length),
