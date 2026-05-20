@@ -22,6 +22,21 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+
+	<!-- 카카오 로그인: URL Scheme 등록 -->
+	<!-- ★ kakaoYOUR_KAKAO_APP_KEY 의 YOUR_KAKAO_APP_KEY 를 실제 네이티브 앱 키로 교체하세요 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakaoYOUR_KAKAO_APP_KEY</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -47,8 +62,14 @@
 	<string>현재 위치를 기반으로 주변 핀을 보여주고 길찾기를 제공합니다.</string>
 	<key>GMSApiKey</key>
 	<string>AIzaSyAyEl5Vc30X00H4SX6Px6CdxvLTeDPqJFA</string>
+
+	<!-- KakaoTalk 및 카카오 관련 앱 쿼리 허용 -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>kakaokompassauth</string>
+		<string>storekit</string>
+		<string>kakaolink</string>
+		<string>kakaoYOUR_KAKAO_APP_KEY</string>
 		<string>comgooglemaps</string>
 		<string>maps</string>
 	</array>

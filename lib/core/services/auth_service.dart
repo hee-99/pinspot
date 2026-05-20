@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
@@ -24,9 +25,55 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
+    // 카카오 토큰도 만료 처리
+    try {
+      await kakao.UserApi.instance.logout();
+    } catch (_) {}
   }
 
   static Future<bool> isLoggedIn() async => (await getUser()) != null;
+
+  // ── 카카오 로그인 ─────────────────────────────────────────────────────────────
+
+  static Future<UserModel?> signInWithKakao() async {
+    try {
+      // 카카오톡 앱이 설치돼 있으면 앱으로, 없으면 브라우저로
+      if (await kakao.isKakaoTalkInstalled()) {
+        try {
+          await kakao.UserApi.instance.loginWithKakaoTalk();
+        } on kakao.KakaoAuthException catch (e) {
+          // 카카오톡에서 취소하거나 실패하면 브라우저로 재시도
+          if (e.error == kakao.AuthErrorCause.accessDenied ||
+              e.error == kakao.AuthErrorCause.unknown) {
+            await kakao.UserApi.instance.loginWithKakaoAccount();
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        await kakao.UserApi.instance.loginWithKakaoAccount();
+      }
+
+      // 로그인 성공 → 사용자 정보 가져오기
+      final me = await kakao.UserApi.instance.me();
+      final user = UserModel(
+        id: me.id.toString(),
+        name: me.kakaoAccount?.profile?.nickname ?? '카카오 유저',
+        email: me.kakaoAccount?.email,
+        provider: 'kakao',
+        photoUrl: me.kakaoAccount?.profile?.thumbnailImageUrl,
+      );
+      await _save(user);
+      return user;
+    } on kakao.KakaoAuthException catch (e) {
+      if (e.error == kakao.AuthErrorCause.accessDenied) return null; // 사용자 취소
+      debugPrint('Kakao auth error: $e');
+      rethrow;
+    } catch (e) {
+      debugPrint('Kakao sign-in error: $e');
+      rethrow;
+    }
+  }
 
   // ── Apple Sign-In ─────────────────────────────────────────────────────────
 
@@ -65,40 +112,9 @@ class AuthService {
     }
   }
 
-  // ── Kakao Sign-In (stub — needs kakao_flutter_sdk_user + native setup) ────
-  //
-  // 1. pubspec.yaml 에 추가:
-  //      kakao_flutter_sdk_user: ^1.9.0
-  // 2. https://developers.kakao.com/console 에서 앱 등록 후 네이티브 앱 키 발급
-  // 3. AndroidManifest.xml 에 KakaoActivity / URL scheme 추가
-  // 4. Info.plist 에 URL scheme 추가
-  // 준비 완료 후 아래 stub를 실제 구현으로 교체:
-  //
-  //   import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-  //   final token = await UserApi.instance.loginWithKakaoAccount();
-  //   final user = await UserApi.instance.me();
-  //   ...
-  static Future<UserModel?> signInWithKakao() async {
-    // TODO: 카카오 SDK 설정 후 구현
-    return null;
-  }
-
-  // ── Naver Sign-In (stub — needs flutter_naver_login + native setup) ───────
-  //
-  // 1. pubspec.yaml 에 추가:
-  //      flutter_naver_login: ^1.8.0
-  // 2. https://developers.naver.com/apps 에서 앱 등록 후 클라이언트 ID/Secret 발급
-  // 3. AndroidManifest.xml 에 clientId / clientSecret / appName 추가
-  // 4. Info.plist 에 URL scheme 추가
-  // 준비 완료 후 아래 stub를 실제 구현으로 교체:
-  //
-  //   import 'package:flutter_naver_login/flutter_naver_login.dart';
-  //   final result = await FlutterNaverLogin.logIn();
-  //   ...
-  static Future<UserModel?> signInWithNaver() async {
-    // TODO: 네이버 SDK 설정 후 구현
-    return null;
-  }
+  // ── Naver (stub) ───────────────────────────────────────────────────────────
+  // TODO: flutter_naver_login 패키지 + 네이버 개발자 센터 앱 등록 후 구현
+  static Future<UserModel?> signInWithNaver() async => null;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
