@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/community_model.dart';
@@ -118,7 +119,41 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                       label: '핀 ${_formatCount(widget.community.pinCount)}개',
                       color: color),
                   const Spacer(),
-                  if (!widget.community.isOwner)
+                  if (widget.community.isPrivate && widget.community.joinCode != null)
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: widget.community.joinCode!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('초대 코드 ${widget.community.joinCode} 복사됐어요'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: color,
+                            duration: const Duration(seconds: 2),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: color.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock_outline, size: 13, color: color),
+                            const SizedBox(width: 5),
+                            Text(widget.community.joinCode!,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 2, color: color)),
+                            const SizedBox(width: 6),
+                            Icon(Icons.copy_rounded, size: 13, color: color),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (!widget.community.isOwner)
                     GestureDetector(
                       onTap: _toggleJoin,
                       child: AnimatedContainer(

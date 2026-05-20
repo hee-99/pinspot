@@ -28,7 +28,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   List<CommunityModel> get _joined => _communities.where((c) => c.isJoined).toList();
-  List<CommunityModel> get _explore => _communities.where((c) => !c.isJoined).toList();
+  // 비공개 커뮤니티는 둘러보기에 노출하지 않음
+  List<CommunityModel> get _explore =>
+      _communities.where((c) => !c.isJoined && !c.isPrivate).toList();
 
   Future<void> _openCreate() async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCommunityScreen()));
@@ -45,6 +47,113 @@ class _CommunityScreenState extends State<CommunityScreen> {
     _load();
   }
 
+  Future<void> _showJoinByCode() async {
+    final ctrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          left: 16, right: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('코드로 커뮤니티 참여',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              const Text('초대 코드 6자리를 입력하세요',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLength: 6,
+                textCapitalization: TextCapitalization.characters,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 8,
+                ),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '• • • • • •',
+                  hintStyle: TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 8,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.4),
+                  ),
+                  filled: true,
+                  fillColor: AppTheme.background,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final code = ctrl.text.trim().toUpperCase();
+                    if (code.length != 6) return;
+                    Navigator.pop(context);
+                    final community = await CommunityService.joinByCode(code);
+                    if (!mounted) return;
+                    if (community != null) {
+                      _load();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${community.emoji} ${community.name} 커뮤니티에 참여했어요!'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: community.color,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('코드를 찾을 수 없어요. 다시 확인해주세요.'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: AppTheme.textPrimary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: const Text('참여하기',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,6 +163,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
         elevation: 0,
         title: const Text('커뮤니티', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.vpn_key_outlined, color: AppTheme.textSecondary),
+            tooltip: '코드로 참여',
+            onPressed: _showJoinByCode,
+          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
             tooltip: '만들기',

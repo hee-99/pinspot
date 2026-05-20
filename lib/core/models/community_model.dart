@@ -10,6 +10,8 @@ class CommunityModel {
   final int pinCount;
   final bool isOwner;
   final bool isJoined;
+  final bool isPrivate;
+  final String? joinCode;
   final DateTime createdAt;
 
   const CommunityModel({
@@ -22,6 +24,8 @@ class CommunityModel {
     required this.pinCount,
     required this.isOwner,
     required this.isJoined,
+    required this.isPrivate,
+    this.joinCode,
     required this.createdAt,
   });
 
@@ -36,6 +40,8 @@ class CommunityModel {
     'memberCount': memberCount,
     'pinCount': pinCount,
     'isOwner': isOwner,
+    'isPrivate': isPrivate,
+    'joinCode': joinCode,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -49,6 +55,8 @@ class CommunityModel {
         memberCount: j['memberCount'] as int,
         pinCount: j['pinCount'] as int,
         isOwner: j['isOwner'] as bool? ?? false,
+        isPrivate: j['isPrivate'] as bool? ?? false,
+        joinCode: j['joinCode'] as String?,
         isJoined: isJoined,
         createdAt: DateTime.parse(j['createdAt'] as String),
       );
@@ -64,6 +72,8 @@ class CommunityModel {
         pinCount: pinCount ?? this.pinCount,
         isOwner: isOwner,
         isJoined: isJoined ?? this.isJoined,
+        isPrivate: isPrivate,
+        joinCode: joinCode,
         createdAt: createdAt,
       );
 }

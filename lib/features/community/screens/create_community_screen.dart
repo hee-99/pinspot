@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/community_model.dart';
 import '../../../core/services/community_service.dart';
@@ -15,6 +16,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _descCtrl = TextEditingController();
   String _selectedEmoji = '📍';
   int _selectedColor = 0xFFFF7043;
+  bool _isPrivate = false;
   bool _submitting = false;
 
   static const _emojis = [
@@ -42,6 +44,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
     setState(() => _submitting = true);
 
+    final code = _isPrivate ? CommunityService.generateJoinCode() : null;
     final community = CommunityModel(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -52,10 +55,23 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       pinCount: 0,
       isOwner: true,
       isJoined: true,
+      isPrivate: _isPrivate,
+      joinCode: code,
       createdAt: DateTime.now(),
     );
 
     await CommunityService.createCommunity(community);
+
+    if (!mounted) return;
+    if (code != null) {
+      await Clipboard.setData(ClipboardData(text: code));
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (_) => _CodeDialog(code: code, communityName: name, color: Color(_selectedColor)),
+      );
+    }
+
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -202,7 +218,51 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 28),
+
+            // 공개/비공개 토글
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.background,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  _VisibilityOption(
+                    icon: Icons.public,
+                    title: '공개',
+                    subtitle: '누구나 검색하고 참여할 수 있어요',
+                    selected: !_isPrivate,
+                    color: Color(_selectedColor),
+                    onTap: () => setState(() => _isPrivate = false),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _VisibilityOption(
+                    icon: Icons.lock_outline,
+                    title: '비공개',
+                    subtitle: '초대 코드가 있는 사람만 참여 가능해요',
+                    selected: _isPrivate,
+                    color: Color(_selectedColor),
+                    onTap: () => setState(() => _isPrivate = true),
+                  ),
+                ],
+              ),
+            ),
+            if (_isPrivate)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: Color(_selectedColor)),
+                    const SizedBox(width: 6),
+                    Text(
+                      '커뮤니티 생성 후 6자리 코드가 발급됩니다.',
+                      style: TextStyle(fontSize: 12, color: Color(_selectedColor)),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 24),
 
             SizedBox(
               width: double.infinity,
@@ -225,6 +285,159 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               ),
             ),
             const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisibilityOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _VisibilityOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: selected ? color : AppTheme.textSecondary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                    )),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 22, height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? color : Colors.transparent,
+                border: Border.all(
+                  color: selected ? color : const Color(0xFFCCCCCC),
+                  width: 2,
+                ),
+              ),
+              child: selected
+                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CodeDialog extends StatelessWidget {
+  final String code;
+  final String communityName;
+  final Color color;
+  const _CodeDialog({required this.code, required this.communityName, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60, height: 60,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(Icons.lock_open, color: color, size: 28),
+            ),
+            const SizedBox(height: 16),
+            const Text('초대 코드 발급 완료', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text('$communityName 멤버에게 공유하세요',
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    code,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 6,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: code));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('코드가 복사됐어요'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: color,
+                          duration: const Duration(seconds: 1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    },
+                    child: Icon(Icons.copy_rounded, color: color, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text('클립보드에 자동 복사됐어요',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('확인', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+            ),
           ],
         ),
       ),
