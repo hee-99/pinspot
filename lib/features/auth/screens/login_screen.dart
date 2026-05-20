@@ -29,13 +29,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
-      } else if (provider == 'kakao') {
-        _snack('카카오 로그인은 앱 등록 후 이용 가능합니다');
-      } else if (provider == 'naver') {
-        _snack('네이버 로그인은 앱 등록 후 이용 가능합니다');
       } else if (provider == 'apple') {
         _snack('Apple 로그인은 iOS에서만 지원합니다');
       }
+      // kakao/naver: null == 사용자가 취소한 경우 → 별도 메시지 없음
     } catch (e) {
       if (mounted) _snack('로그인 중 오류가 발생했습니다');
     } finally {

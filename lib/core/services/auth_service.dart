@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -25,10 +26,9 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
-    // 카카오 토큰도 만료 처리
-    try {
-      await kakao.UserApi.instance.logout();
-    } catch (_) {}
+    // 각 SDK 토큰도 만료 처리
+    try { await kakao.UserApi.instance.logout(); } catch (_) {}
+    try { await FlutterNaverLogin.logOut(); } catch (_) {}
   }
 
   static Future<bool> isLoggedIn() async => (await getUser()) != null;
@@ -37,12 +37,10 @@ class AuthService {
 
   static Future<UserModel?> signInWithKakao() async {
     try {
-      // 카카오톡 앱이 설치돼 있으면 앱으로, 없으면 브라우저로
       if (await kakao.isKakaoTalkInstalled()) {
         try {
           await kakao.UserApi.instance.loginWithKakaoTalk();
         } on kakao.KakaoAuthException catch (e) {
-          // 카카오톡에서 취소하거나 실패하면 브라우저로 재시도
           if (e.error == kakao.AuthErrorCause.accessDenied ||
               e.error == kakao.AuthErrorCause.unknown) {
             await kakao.UserApi.instance.loginWithKakaoAccount();
@@ -54,7 +52,6 @@ class AuthService {
         await kakao.UserApi.instance.loginWithKakaoAccount();
       }
 
-      // 로그인 성공 → 사용자 정보 가져오기
       final me = await kakao.UserApi.instance.me();
       final user = UserModel(
         id: me.id.toString(),
@@ -66,11 +63,41 @@ class AuthService {
       await _save(user);
       return user;
     } on kakao.KakaoAuthException catch (e) {
-      if (e.error == kakao.AuthErrorCause.accessDenied) return null; // 사용자 취소
+      if (e.error == kakao.AuthErrorCause.accessDenied) return null;
       debugPrint('Kakao auth error: $e');
       rethrow;
     } catch (e) {
       debugPrint('Kakao sign-in error: $e');
+      rethrow;
+    }
+  }
+
+  // ── 네이버 로그인 ─────────────────────────────────────────────────────────────
+
+  static Future<UserModel?> signInWithNaver() async {
+    try {
+      final result = await FlutterNaverLogin.logIn();
+
+      if (result.status != NaverLoginStatus.loggedIn) return null;
+
+      final acc = result.account;
+      final name = acc.name.isNotEmpty
+          ? acc.name
+          : acc.nickname.isNotEmpty
+              ? acc.nickname
+              : '네이버 유저';
+
+      final user = UserModel(
+        id: acc.id,
+        name: name,
+        email: acc.email.isNotEmpty ? acc.email : null,
+        provider: 'naver',
+        photoUrl: acc.profileImage.isNotEmpty ? acc.profileImage : null,
+      );
+      await _save(user);
+      return user;
+    } catch (e) {
+      debugPrint('Naver sign-in error: $e');
       rethrow;
     }
   }
@@ -112,10 +139,6 @@ class AuthService {
     }
   }
 
-  // ── Naver (stub) ───────────────────────────────────────────────────────────
-  // TODO: flutter_naver_login 패키지 + 네이버 개발자 센터 앱 등록 후 구현
-  static Future<UserModel?> signInWithNaver() async => null;
-
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   static String _generateNonce([int length = 32]) {
@@ -124,6 +147,5 @@ class AuthService {
     return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
-  static String _uuid() =>
-      DateTime.now().millisecondsSinceEpoch.toString();
+  static String _uuid() => DateTime.now().millisecondsSinceEpoch.toString();
 }
