@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter devices *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080)",
+      "Bash(flutter run *)",
+      "Bash(flutter --version)",
+      "Bash(gh --version)",
+      "Bash(npx firebase *)",
+      "Bash(npm list *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)"
+    ]
+  }
+}
