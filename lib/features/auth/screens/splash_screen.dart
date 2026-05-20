@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/auth_service.dart';
+import '../../home/screens/home_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -62,14 +64,22 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (!mounted) return;
       final prefs = await SharedPreferences.getInstance();
       final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+      final loggedIn = await AuthService.isLoggedIn();
       if (!mounted) return;
       _bounceController.stop();
       _fadeController.forward().then((_) {
         if (!mounted) return;
+        Widget next;
+        if (!onboardingDone) {
+          next = const OnboardingScreen();
+        } else if (loggedIn) {
+          next = const HomeScreen();
+        } else {
+          next = const LoginScreen();
+        }
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) =>
-                onboardingDone ? const LoginScreen() : const OnboardingScreen(),
+            pageBuilder: (_, __, ___) => next,
             transitionsBuilder: (_, anim, __, child) =>
                 FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 300),
