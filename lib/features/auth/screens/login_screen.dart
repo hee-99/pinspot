@@ -40,6 +40,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginAsGuest() async {
+    setState(() => _loadingProvider = 'guest');
+    await AuthService.signInAsGuest();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   void _snack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -106,6 +115,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 onTap: () => _login('apple'),
               ),
               const Spacer(),
+              // ── 임시 테스트 버튼 (키 발급 후 제거) ──────────────────────────
+              Center(
+                child: GestureDetector(
+                  onTap: _loadingProvider != null ? null : _loginAsGuest,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFDDDDDD)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.science_outlined, size: 15,
+                            color: AppTheme.textSecondary.withValues(alpha: 0.6)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '테스트로 시작하기',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Center(
                 child: Text(
                   '로그인 시 서비스 이용약관 및 개인정보 처리방침에 동의합니다',

@@ -33,6 +33,17 @@ class AuthService {
 
   static Future<bool> isLoggedIn() async => (await getUser()) != null;
 
+  // ── 테스트용 게스트 로그인 (키 발급 후 제거) ─────────────────────────────────
+  static Future<UserModel> signInAsGuest() async {
+    final user = UserModel(
+      id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
+      name: '게스트',
+      provider: 'guest',
+    );
+    await _save(user);
+    return user;
+  }
+
   // ── 카카오 로그인 ─────────────────────────────────────────────────────────────
 
   static Future<UserModel?> signInWithKakao() async {
