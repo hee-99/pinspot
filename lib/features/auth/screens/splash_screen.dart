@@ -102,84 +102,113 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       opacity: _fadeAnim,
       child: Scaffold(
         backgroundColor: AppTheme.surface,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
-              // 핀 아이콘 + 그림자
-              AnimatedBuilder(
-                animation: _bounceController,
-                builder: (context, child) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Transform.translate(
-                        offset: Offset(0, _bounceAnim.value),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: AppTheme.primary,
-                          size: 96,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // 바닥 그림자 (핀이 내려올수록 커짐)
-                      Transform.scale(
-                        scale: _scaleAnim.value,
-                        child: Container(
-                          width: 36,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
+        body: Stack(
+          children: [
+            // 배경 그라디언트
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.2,
+                    colors: [
+                      AppTheme.primary.withValues(alpha: 0.06),
+                      AppTheme.surface,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+                  // 핀 아이콘 + 그림자
+                  AnimatedBuilder(
+                    animation: _bounceController,
+                    builder: (context, _) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.translate(
+                            offset: Offset(0, _bounceAnim.value),
+                            child: Container(
+                              width: 100, height: 100,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: AppTheme.primary,
+                                size: 60,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Transform.scale(
+                            scale: _scaleAnim.value,
+                            child: Container(
+                              width: 40, height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 36),
+                  // 앱 이름
+                  const Text(
+                    'PINSPOT',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.primary,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '찍는 순간, 지도가 된다',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: AppTheme.textSecondary.withValues(alpha: 0.8),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(flex: 2),
+                  // 로딩 인디케이터
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 52),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primary.withValues(alpha: 0.45),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 36),
-              // 앱 이름
-              const Text(
-                'PINSPOT',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.primary,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '찍는 순간, 지도가 된다',
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-              ),
-              const Spacer(flex: 2),
-              // 로딩 인디케이터
-              Padding(
-                padding: const EdgeInsets.only(bottom: 48),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primary.withValues(alpha: 0.5),
-                      ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '잠시만 기다려주세요',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary.withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '로딩 중...',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.7)),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

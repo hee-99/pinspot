@@ -10,6 +10,7 @@ import '../../../core/models/pin_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pin_service.dart';
+import '../../../core/utils/marker_builder.dart';
 import '../../auth/screens/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -711,6 +712,24 @@ class _MyMapTab extends StatefulWidget {
 
 class _MyMapTabState extends State<_MyMapTab> {
   final _controller = Completer<GoogleMapController>();
+  String _selectedCategory = '전체';
+  Map<String, BitmapDescriptor> _markerIcons = {};
+
+  List<String> get _categories {
+    final cats = widget.pins.map((p) => p.category).toSet().toList()..sort();
+    return ['전체', ...cats];
+  }
+
+  List<PinModel> get _filtered {
+    if (_selectedCategory == '전체') return widget.pins;
+    return widget.pins.where((p) => p.category == _selectedCategory).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkers();
+  }
 
   @override
   void didUpdateWidget(_MyMapTab oldWidget) {
@@ -718,19 +737,31 @@ class _MyMapTabState extends State<_MyMapTab> {
     if (widget.pins.length != oldWidget.pins.length && _controller.isCompleted) {
       _fitBounds();
     }
+    if (widget.pins != oldWidget.pins) _loadMarkers();
+  }
+
+  Future<void> _loadMarkers() async {
+    final icons = <String, BitmapDescriptor>{};
+    for (final pin in widget.pins) {
+      if (pin.photoPath != null) {
+        icons[pin.id] = await MarkerBuilder.buildPhotoMarker(pin.photoPath!);
+      }
+    }
+    if (mounted) setState(() => _markerIcons = icons);
   }
 
   Future<void> _fitBounds() async {
-    if (widget.pins.isEmpty) return;
+    final pins = _filtered;
+    if (pins.isEmpty) return;
     final ctrl = await _controller.future;
-    if (widget.pins.length == 1) {
+    if (pins.length == 1) {
       ctrl.animateCamera(CameraUpdate.newLatLngZoom(
-        LatLng(widget.pins.first.lat, widget.pins.first.lng), 13));
+        LatLng(pins.first.lat, pins.first.lng), 13));
       return;
     }
-    double s = widget.pins.first.lat, n = widget.pins.first.lat;
-    double w = widget.pins.first.lng, e = widget.pins.first.lng;
-    for (final p in widget.pins) {
+    double s = pins.first.lat, n = pins.first.lat;
+    double w = pins.first.lng, e = pins.first.lng;
+    for (final p in pins) {
       if (p.lat < s) s = p.lat;
       if (p.lat > n) n = p.lat;
       if (p.lng < w) w = p.lng;
@@ -740,44 +771,140 @@ class _MyMapTabState extends State<_MyMapTab> {
       LatLngBounds(southwest: LatLng(s, w), northeast: LatLng(n, e)), 80));
   }
 
-  Set<Marker> get _markers => widget.pins.map((pin) => Marker(
+  Set<Marker> _buildMarkers(List<PinModel> pins) => pins.map((pin) => Marker(
     markerId: MarkerId(pin.id),
     position: LatLng(pin.lat, pin.lng),
     infoWindow: InfoWindow(title: pin.title, snippet: pin.category),
-    icon: BitmapDescriptor.defaultMarkerWithHue(14.0),
+    icon: _markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(14.0),
   )).toSet();
+
+  LatLng get _defaultCenter {
+    final pins = _filtered.isNotEmpty ? _filtered : widget.pins;
+    if (pins.isEmpty) return const LatLng(37.5665, 126.9780);
+    return LatLng(
+      pins.map((p) => p.lat).reduce((a, b) => a + b) / pins.length,
+      pins.map((p) => p.lng).reduce((a, b) => a + b) / pins.length,
+    );
+  }
+
+  void _onCategorySelected(String cat) {
+    setState(() => _selectedCategory = cat);
+    if (_controller.isCompleted) _fitBounds();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.pins.isEmpty) {
-      return const Center(
-        child: Text('등록한 핀이 없어요',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-      );
-    }
+    final filtered = _filtered;
+    // 카테고리 칩 bar 높이 (padding 10*2 + 칩 27 = 47)
+    const filterBarHeight = 47.0;
+    // 하단 장소 패널 높이 (레이블 14+14+8 + ListView 80 = 116)
+    const placeChipsHeight = 116.0;
 
-    final center = widget.pins.isNotEmpty
-        ? LatLng(
-            widget.pins.map((p) => p.lat).reduce((a, b) => a + b) / widget.pins.length,
-            widget.pins.map((p) => p.lng).reduce((a, b) => a + b) / widget.pins.length,
-          )
-        : const LatLng(37.5665, 126.9780);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Stack 전략: GoogleMap이 전체 공간을 차지하고,
+        // 필터 바·배지·장소 칩은 Positioned로 위에 올림.
+        // Expanded inside scroll view를 쓰지 않아 NestedScrollView에서도 안전.
+        final totalHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : MediaQuery.of(context).size.height - 160;
 
-    return Column(
-      children: [
-        Expanded(
+        return SizedBox(
+          height: totalHeight,
           child: Stack(
             children: [
-              GoogleMap(
-                initialCameraPosition: CameraPosition(target: center, zoom: 11.5),
-                onMapCreated: _controller.complete,
-                style: widget.mapStyle,
-                markers: _markers,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
+              // ── 지도 (전체 공간) ──────────────────────────────────────
+              Positioned.fill(
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(target: _defaultCenter, zoom: 11.5),
+                  onMapCreated: (ctrl) {
+                    _controller.complete(ctrl);
+                    if (filtered.isNotEmpty) _fitBounds();
+                  },
+                  style: widget.mapStyle,
+                  markers: _buildMarkers(filtered),
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                ),
               ),
+
+              // ── 카테고리 필터 칩 (상단 고정) ────────────────────────
               Positioned(
-                top: 12,
+                top: 0,
+                left: 0,
+                right: 0,
+                height: filterBarHeight,
+                child: Container(
+                  color: AppTheme.surface,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: _categories.map((cat) {
+                        final isSelected = cat == _selectedCategory;
+                        final count = cat == '전체'
+                            ? widget.pins.length
+                            : widget.pins.where((p) => p.category == cat).length;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () => _onCategorySelected(cat),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppTheme.primary : AppTheme.background,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected ? AppTheme.primary : const Color(0xFFE0E0E0),
+                                ),
+                              ),
+                              child: Text(
+                                widget.pins.isEmpty ? cat : '$cat  $count',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  color: isSelected ? Colors.white : AppTheme.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── 핀 없을 때 안내 오버레이 ─────────────────────────────
+              if (widget.pins.isEmpty)
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: filterBarHeight),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12),
+                      ],
+                    ),
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_location_alt_outlined, size: 36, color: AppTheme.primary),
+                        SizedBox(height: 8),
+                        Text('핀을 등록하면 지도에 표시돼요',
+                            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // ── 우상단 배지 ───────────────────────────────────────────
+              Positioned(
+                top: filterBarHeight + 12,
                 right: 12,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -796,62 +923,80 @@ class _MyMapTabState extends State<_MyMapTab> {
                         children: [
                           const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
                           const SizedBox(width: 4),
-                          Text('내 핀 ${widget.pins.length}개',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          Text(
+                            _selectedCategory == '전체'
+                                ? '내 핀 ${widget.pins.length}개'
+                                : '$_selectedCategory ${filtered.length}개',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: _fitBounds,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2)),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.fit_screen_outlined, size: 14, color: AppTheme.textSecondary),
-                            SizedBox(width: 4),
-                            Text('전체보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-                          ],
+                    if (filtered.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _fitBounds,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.fit_screen_outlined, size: 14, color: AppTheme.textSecondary),
+                              SizedBox(width: 4),
+                              Text('전체보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-        Container(
-          color: AppTheme.surface,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
-                child: Text('방문한 장소', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              ),
-              SizedBox(
-                height: 80,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  itemCount: widget.pins.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (_, i) => _PlaceChip(pin: widget.pins[i]),
+
+              // ── 하단 장소 칩 (핀 있을 때만) ──────────────────────────
+              if (filtered.isNotEmpty)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: placeChipsHeight,
+                  child: Container(
+                    color: AppTheme.surface,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                          child: Text(
+                            _selectedCategory == '전체' ? '방문한 장소' : '$_selectedCategory 장소',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        SizedBox(
+                          height: 80,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 10),
+                            itemBuilder: (_, i) => _PlaceChip(pin: filtered[i]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

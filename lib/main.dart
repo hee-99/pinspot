@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/landmark_info_service.dart';
 import 'features/auth/screens/splash_screen.dart';
 
 // ★ 카카오 개발자 콘솔(https://developers.kakao.com)에서 발급받은
@@ -11,6 +12,8 @@ const String _kakaoAppKey = 'YOUR_KAKAO_APP_KEY';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(nativeAppKey: _kakaoAppKey);
+  // 앱 시작 시 만료된 장소 정보 캐시를 백그라운드에서 자동 갱신
+  LandmarkInfoService.refreshStaleCacheInBackground().ignore();
   runApp(const PinspotApp());
 }
 

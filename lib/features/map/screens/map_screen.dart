@@ -548,95 +548,103 @@ class _PinBottomSheet extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -4)),
+          ],
         ),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 16),
+              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        pin.name,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 24),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(pin.name,
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(pin.category,
+                                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                                ),
+                                if (dist != null) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.near_me_rounded, size: 12,
+                                      color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 3),
+                                  Text(dist,
+                                      style: TextStyle(fontSize: 12,
+                                          color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                                ],
+                              ],
                             ),
-                            child: Text(
-                              pin.category,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (dist != null) ...[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.near_me, size: 12, color: AppTheme.textSecondary),
-                            const SizedBox(width: 3),
-                            Text(dist, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: onNavigate,
+                          icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
+                          label: const Text('길찾기',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        width: 50, height: 50,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: IconButton(
+                          onPressed: onShare,
+                          icon: const Icon(Icons.ios_share_outlined, color: AppTheme.textPrimary, size: 20),
+                          tooltip: '공유',
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.location_on, color: AppTheme.primary, size: 22),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onNavigate,
-                    icon: const Icon(Icons.directions, size: 18, color: Colors.white),
-                    label: const Text(
-                      '길찾기',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.background,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: onShare,
-                    icon: const Icon(Icons.ios_share_outlined, color: AppTheme.textPrimary, size: 20),
-                    tooltip: '공유',
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -664,69 +672,105 @@ class _NavigationPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
+            color: AppTheme.primary.withValues(alpha: 0.15),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // 상단 컬러 바
           Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+            height: 4,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, Color(0xFFFF8A65)],
+              ),
             ),
-            child: const Icon(Icons.navigation, color: AppTheme.primary, size: 20),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: Row(
               children: [
-                Text(
-                  destination,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.directions_walk, color: AppTheme.primary, size: 22),
                 ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.straighten, size: 12, color: AppTheme.textSecondary),
-                    const SizedBox(width: 3),
-                    Text(distance, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.access_time, size: 12, color: AppTheme.textSecondary),
-                    const SizedBox(width: 3),
-                    Text(duration, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        destination,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          _NavStat(Icons.straighten_rounded, distance, AppTheme.primary),
+                          const SizedBox(width: 12),
+                          _NavStat(Icons.access_time_rounded, duration, const Color(0xFF5C6BC0)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onCancel,
+                  child: Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded, color: AppTheme.textSecondary, size: 18),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onCancel,
-            child: Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close, color: Color(0xFFC62828), size: 16),
-            ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+class _NavStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final Color color;
+  const _NavStat(this.icon, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: Icon(icon, size: 11, color: color),
+        ),
+        const SizedBox(width: 4),
+        Text(value, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }
@@ -767,15 +811,19 @@ class _SavedPinBottomSheet extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -4)),
+          ],
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (pin.photoPath != null && !kIsWeb)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.zero,
                 child: Image.file(
                   File(pin.photoPath!),
                   width: double.infinity,
@@ -784,20 +832,38 @@ class _SavedPinBottomSheet extends StatelessWidget {
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 14, left: 0),
+              alignment: Alignment.center,
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 24),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(pin.title,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 6),
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 Container(
@@ -807,36 +873,30 @@ class _SavedPinBottomSheet extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(pin.category,
-                                    style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
                                 ),
                                 if (dist != null) ...[
                                   const SizedBox(width: 8),
-                                  const Icon(Icons.near_me, size: 12, color: AppTheme.textSecondary),
+                                  Icon(Icons.near_me_rounded, size: 12,
+                                      color: AppTheme.textSecondary.withValues(alpha: 0.7)),
                                   const SizedBox(width: 3),
-                                  Text(dist, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                                  Text(dist,
+                                      style: TextStyle(fontSize: 12,
+                                          color: AppTheme.textSecondary.withValues(alpha: 0.7))),
                                 ],
                               ],
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.location_on, color: AppTheme.primary, size: 22),
-                      ),
                     ],
                   ),
                   if (pin.description.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(pin.description,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 16),
                   Row(
@@ -844,23 +904,23 @@ class _SavedPinBottomSheet extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: onNavigate,
-                          icon: const Icon(Icons.directions, size: 18, color: Colors.white),
+                          icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
                           label: const Text('길찾기',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                             elevation: 0,
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        width: 48, height: 48,
+                        width: 50, height: 50,
                         decoration: BoxDecoration(
-                          color: AppTheme.background,
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(13),
                         ),
                         child: IconButton(
                           onPressed: onShare,

@@ -43,8 +43,13 @@ dependencies:
   url_launcher: ^6.3.0
   sign_in_with_apple: ^6.0.0
   crypto: ^3.0.6
-  kakao_flutter_sdk_user: ^1.9.0
-  flutter_naver_login: ^1.8.0
+  kakao_flutter_sdk_user: ">=1.9.0 <1.10.0"
+  flutter_naver_login: 2.1.0
+  google_sign_in: ^6.2.0
+
+dependency_overrides:
+  kakao_flutter_sdk_auth: ">=1.9.0 <1.10.0"
+  kakao_flutter_sdk_common: ">=1.9.0 <1.10.0"
 
 dev_dependencies:
   flutter_test:
