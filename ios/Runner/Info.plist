@@ -32,8 +32,8 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kakaoYOUR_KAKAO_APP_KEY</string>
-				<string>naverYOUR_NAVER_CLIENT_ID</string>
+				<string>kakaoae6d4510551c051be86b63cd2809ec82</string>
+				<string>naveranPckUsF4XiFXUlqJEhR</string>
 			</array>
 		</dict>
 	</array>
@@ -70,7 +70,7 @@
 		<string>kakaokompassauth</string>
 		<string>storekit</string>
 		<string>kakaolink</string>
-		<string>kakaoYOUR_KAKAO_APP_KEY</string>
+		<string>kakaoae6d4510551c051be86b63cd2809ec82</string>
 		<string>naversearchapp</string>
 		<string>naversearchthirdlogin</string>
 		<string>comgooglemaps</string>

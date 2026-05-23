@@ -4,9 +4,9 @@ import GoogleMaps
 import NaverThirdPartyLogin
 
 // ★ YOUR_NAVER_CLIENT_ID / YOUR_NAVER_CLIENT_SECRET 을 실제 값으로 교체하세요
-private let naverClientId     = "YOUR_NAVER_CLIENT_ID"
-private let naverClientSecret = "YOUR_NAVER_CLIENT_SECRET"
-private let naverUrlScheme    = "naverYOUR_NAVER_CLIENT_ID"
+private let naverClientId     = "anPckUsF4XiFXUlqJEhR"
+private let naverClientSecret = "6ftYwDQp8X"
+private let naverUrlScheme    = "naveranPckUsF4XiFXUlqJEhR"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {

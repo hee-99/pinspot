@@ -7,7 +7,7 @@ import 'features/auth/screens/splash_screen.dart';
 // ★ 카카오 개발자 콘솔(https://developers.kakao.com)에서 발급받은
 //   네이티브 앱 키로 교체하세요.
 //   AndroidManifest.xml 과 iOS/Info.plist 의 YOUR_KAKAO_APP_KEY 도 동일하게 교체합니다.
-const String _kakaoAppKey = 'YOUR_KAKAO_APP_KEY';
+const String _kakaoAppKey = 'ae6d4510551c051be86b63cd2809ec82';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
