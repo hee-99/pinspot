@@ -1,0 +1,3 @@
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
+-dontwarn okhttp3.internal.platform.**
