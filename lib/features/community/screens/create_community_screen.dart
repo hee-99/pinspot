@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/community_model.dart';
 import '../../../core/services/community_service.dart';
@@ -18,16 +21,20 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   int _selectedColor = 0xFFFF7043;
   bool _isPrivate = false;
   bool _submitting = false;
+  String? _customImagePath;
 
   static const _emojis = [
     '📍','🏔️','🌊','🌿','🏚️','📸','🌃','🗿','💧','🎨',
     '🍜','🎭','🏛️','🌸','🔦','🛤️','🏕️','🌋','🏖️','🎪',
+    '🌆','🐾','🎸','⛺','🦋','🍁','🏄','🎯','🌈','🔥',
   ];
 
   static const _colors = [
     0xFFFF7043, 0xFF4CAF50, 0xFF2196F3, 0xFF9C27B0,
     0xFFFF9800, 0xFF00BCD4, 0xFFE91E63, 0xFF795548,
-    0xFF3F51B5, 0xFF607D8B,
+    0xFF3F51B5, 0xFF607D8B, 0xFFEC407A, 0xFF26A69A,
+    0xFF42A5F5, 0xFF66BB6A, 0xFFAB47BC, 0xFFEF5350,
+    0xFF29B6F6, 0xFF8D6E63, 0xFF5C6BC0, 0xFF26C6DA,
   ];
 
   @override
@@ -35,6 +42,94 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     _nameCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    if (kIsWeb) return;
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 85);
+    if (file != null && mounted) setState(() => _customImagePath = file.path);
+  }
+
+  void _showCustomEmojiDialog() {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('이모티콘 직접 입력', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        content: TextField(
+          controller: ctrl,
+          maxLength: 2,
+          style: const TextStyle(fontSize: 36),
+          textAlign: TextAlign.center,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '😊',
+            counterText: '',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(_selectedColor), elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final emoji = ctrl.text.trim();
+              if (emoji.isNotEmpty) {
+                setState(() { _selectedEmoji = emoji; _customImagePath = null; });
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('선택', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomColorDialog() {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('커스텀 색상', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        content: TextField(
+          controller: ctrl,
+          maxLength: 7,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '#FF7043',
+            labelText: 'HEX 색상코드',
+            prefixText: '#',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(_selectedColor), elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final hex = ctrl.text.trim().replaceAll('#', '');
+              if (hex.length == 6) {
+                try {
+                  setState(() => _selectedColor = 0xFF000000 | int.parse(hex, radix: 16));
+                  Navigator.pop(ctx);
+                } catch (_) {}
+              }
+            },
+            child: const Text('적용', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -58,6 +153,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       isPrivate: _isPrivate,
       joinCode: code,
       createdAt: DateTime.now(),
+      imagePath: _customImagePath,
     );
 
     await CommunityService.createCommunity(community);
@@ -96,31 +192,87 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Preview card
+            // Preview card (tap to upload image)
             Center(
-              child: Container(
-                width: 100, height: 100,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(_selectedEmoji, style: const TextStyle(fontSize: 44)),
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100, height: 100,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: _customImagePath != null && !kIsWeb
+                          ? Image.file(File(_customImagePath!), fit: BoxFit.cover,
+                              width: 100, height: 100,
+                              errorBuilder: (_, __, ___) =>
+                                  Center(child: Text(_selectedEmoji, style: const TextStyle(fontSize: 44))))
+                          : Center(child: Text(_selectedEmoji, style: const TextStyle(fontSize: 44))),
+                    ),
+                    Positioned(
+                      bottom: 2, right: 2,
+                      child: Container(
+                        width: 30, height: 30,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            if (_customImagePath != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _customImagePath = null),
+                    child: Text('이미지 제거', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 28),
 
             // Emoji picker
-            const Text('아이콘', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                const Text('아이콘', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _showCustomEmojiDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_outlined, size: 13, color: color),
+                        const SizedBox(width: 4),
+                        Text('직접 입력', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: _emojis.map((e) {
-                final selected = e == _selectedEmoji;
+                final selected = e == _selectedEmoji && _customImagePath == null;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedEmoji = e),
+                  onTap: () => setState(() { _selectedEmoji = e; _customImagePath = null; }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     width: 48, height: 48,
@@ -140,29 +292,51 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             const SizedBox(height: 28),
 
             // Color picker
-            const Text('색상', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
             Row(
+              children: [
+                const Text('색상', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _showCustomColorDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.colorize_outlined, size: 13, color: color),
+                        const SizedBox(width: 4),
+                        Text('HEX 입력', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: _colors.map((c) {
                 final selected = c == _selectedColor;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedColor = c),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(
-                        color: Color(c),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: selected ? Colors.white : Colors.transparent,
-                          width: 3,
-                        ),
-                        boxShadow: selected
-                            ? [BoxShadow(color: Color(c).withValues(alpha: 0.5), blurRadius: 6)]
-                            : null,
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedColor = c),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(c),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: selected ? Colors.white : Colors.transparent,
+                        width: 3,
                       ),
+                      boxShadow: selected
+                          ? [BoxShadow(color: Color(c).withValues(alpha: 0.5), blurRadius: 6)]
+                          : null,
                     ),
                   ),
                 );

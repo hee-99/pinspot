@@ -6,6 +6,7 @@ class UserModel {
   final String? email;
   final String provider;
   final String? photoUrl;
+  final String? localPhotoPath;
 
   const UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     this.email,
     required this.provider,
     this.photoUrl,
+    this.localPhotoPath,
   });
 
   String get displayName => name.isNotEmpty ? name : '핀스팟 유저';
@@ -23,6 +25,7 @@ class UserModel {
     'email': email,
     'provider': provider,
     'photoUrl': photoUrl,
+    'localPhotoPath': localPhotoPath,
   };
 
   factory UserModel.fromJson(Map<String, dynamic> j) => UserModel(
@@ -31,6 +34,7 @@ class UserModel {
     email: j['email'] as String?,
     provider: j['provider'] as String,
     photoUrl: j['photoUrl'] as String?,
+    localPhotoPath: j['localPhotoPath'] as String?,
   );
 
   static UserModel? tryParse(String? raw) {

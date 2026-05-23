@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/community_model.dart';
+import '../models/pin_model.dart';
 
 class CommunityService {
   static const _userKey = 'user_communities';
@@ -90,6 +91,49 @@ class CommunityService {
       } catch (_) {}
     }
     return null;
+  }
+
+  // ── 커뮤니티 핀 관리 ──────────────────────────────────────────────────────────
+
+  static const _communityPinsPrefix = 'community_pins_';
+
+  static Future<void> addCommunityPin(String communityId, PinModel pin) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_communityPinsPrefix$communityId';
+    final list = prefs.getStringList(key) ?? [];
+    final alreadyExists = list.any((e) {
+      try { return (json.decode(e) as Map<String, dynamic>)['id'] == pin.id; }
+      catch (_) { return false; }
+    });
+    if (!alreadyExists) {
+      list.add(json.encode(pin.toJson()));
+      await prefs.setStringList(key, list);
+    }
+  }
+
+  static Future<List<PinModel>> getCommunityPins(String communityId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('$_communityPinsPrefix$communityId') ?? [];
+    return list.map((e) {
+      try { return PinModel.fromJson(json.decode(e) as Map<String, dynamic>); }
+      catch (_) { return null; }
+    }).whereType<PinModel>().toList();
+  }
+
+  static Future<List<({PinModel pin, CommunityModel community})>> getJoinedCommunityPins() async {
+    final communities = await getCommunities();
+    final joined = communities.where((c) => c.isJoined).toList();
+    final seenIds = <String>{};
+    final result = <({PinModel pin, CommunityModel community})>[];
+    for (final community in joined) {
+      for (final pin in await getCommunityPins(community.id)) {
+        if (seenIds.add(pin.id)) {
+          result.add((pin: pin, community: community));
+        }
+      }
+    }
+    result.sort((a, b) => b.pin.createdAt.compareTo(a.pin.createdAt));
+    return result;
   }
 
   static Future<void> deleteCommunity(String id) async {

@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/community_model.dart';
+import '../../../core/models/pin_model.dart';
 import '../../../core/services/community_service.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
@@ -281,75 +286,206 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_TabBarDelegate old) => false;
 }
 
-class _PinFeedTab extends StatelessWidget {
+class _PinFeedTab extends StatefulWidget {
   final CommunityModel community;
   const _PinFeedTab({required this.community});
 
   @override
+  State<_PinFeedTab> createState() => _PinFeedTabState();
+}
+
+class _PinFeedTabState extends State<_PinFeedTab> {
+  List<PinModel> _pins = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final pins = await CommunityService.getCommunityPins(widget.community.id);
+    if (mounted) setState(() { _pins = pins; _loading = false; });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                color: community.color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+    }
+    if (_pins.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(color: widget.community.color.withValues(alpha: 0.1), shape: BoxShape.circle),
+                child: Center(child: Text(widget.community.emoji, style: const TextStyle(fontSize: 36))),
               ),
-              child: Center(
-                child: Text(community.emoji,
-                    style: const TextStyle(fontSize: 36)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('아직 핀이 없어요',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            const Text('핀 등록 후 이 커뮤니티에 공유하면\n여기서 모아볼 수 있어요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                    height: 1.6)),
-          ],
+              const SizedBox(height: 20),
+              const Text('아직 핀이 없어요', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              const Text('핀 등록 후 이 커뮤니티에 공유하면\n여기서 모아볼 수 있어요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.6)),
+            ],
+          ),
         ),
-      ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _pins.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _CommunityDetailPinCard(pin: _pins[i], color: widget.community.color),
     );
   }
 }
 
-class _MapTab extends StatelessWidget {
+class _CommunityDetailPinCard extends StatelessWidget {
+  final PinModel pin;
+  final Color color;
+  const _CommunityDetailPinCard({required this.pin, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (pin.photoPath != null && !kIsWeb)
+            Image.file(File(pin.photoPath!), width: double.infinity, height: 160, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _mapPlaceholder())
+          else
+            _mapPlaceholder(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(pin.title,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(pin.category,
+                          style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+                if (pin.description.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(pin.description,
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  '${pin.lat.toStringAsFixed(4)}, ${pin.lng.toStringAsFixed(4)}',
+                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mapPlaceholder() => Container(
+    height: 80,
+    decoration: BoxDecoration(gradient: LinearGradient(
+      colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+    )),
+    child: Center(child: Icon(Icons.location_on, color: color.withValues(alpha: 0.5), size: 32)),
+  );
+}
+
+class _MapTab extends StatefulWidget {
   final CommunityModel community;
   const _MapTab({required this.community});
 
   @override
+  State<_MapTab> createState() => _MapTabState();
+}
+
+class _MapTabState extends State<_MapTab> {
+  final _mapCtrl = Completer<GoogleMapController>();
+  List<PinModel> _pins = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final pins = await CommunityService.getCommunityPins(widget.community.id);
+    if (mounted) setState(() { _pins = pins; _loading = false; });
+  }
+
+  Set<Marker> get _markers => _pins.map((pin) => Marker(
+    markerId: MarkerId(pin.id),
+    position: LatLng(pin.lat, pin.lng),
+    infoWindow: InfoWindow(title: pin.title, snippet: pin.category),
+    icon: BitmapDescriptor.defaultMarkerWithHue(14.0),
+  )).toSet();
+
+  LatLng get _center {
+    if (_pins.isEmpty) return const LatLng(37.5665, 126.9780);
+    return LatLng(
+      _pins.map((p) => p.lat).reduce((a, b) => a + b) / _pins.length,
+      _pins.map((p) => p.lng).reduce((a, b) => a + b) / _pins.length,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+    }
+    if (_pins.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.map_outlined,
-                size: 60, color: community.color.withValues(alpha: 0.4)),
+            Icon(Icons.map_outlined, size: 60, color: widget.community.color.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
-            const Text('커뮤니티 지도',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text('공유된 핀이 없어요', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            const Text('멤버들이 공유한 핀이\n지도에 표시될 예정이에요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                    height: 1.6)),
+            const Text('핀을 공유하면 지도에 표시돼요',
+                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
           ],
         ),
-      ),
+      );
+    }
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(target: _center, zoom: 11),
+      onMapCreated: _mapCtrl.complete,
+      markers: _markers,
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: false,
     );
   }
 }

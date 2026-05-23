@@ -2,11 +2,16 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/models/landmark_info_model.dart';
 import '../../../core/models/pin_model.dart';
+import '../../../core/models/community_model.dart';
+import '../../../core/services/community_service.dart';
+import '../../../core/services/landmark_info_service.dart';
 import '../../../core/services/pin_service.dart';
 
 // ─── 더미 데이터 ────────────────────────────────────────────────────────────────
@@ -112,25 +117,27 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
   final Map<int, bool> _liked = {};
   final Map<int, bool> _saved = {};
   List<PinModel> _savedPins = [];
+  List<({PinModel pin, CommunityModel community})> _communityPins = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadSavedPins();
-    PinRefreshNotifier.instance.addListener(_loadSavedPins);
+    _loadData();
+    PinRefreshNotifier.instance.addListener(_loadData);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    PinRefreshNotifier.instance.removeListener(_loadSavedPins);
+    PinRefreshNotifier.instance.removeListener(_loadData);
     super.dispose();
   }
 
-  Future<void> _loadSavedPins() async {
+  Future<void> _loadData() async {
     final pins = await PinService.getPins();
-    if (mounted) setState(() => _savedPins = pins);
+    final communityPins = await CommunityService.getJoinedCommunityPins();
+    if (mounted) setState(() { _savedPins = pins; _communityPins = communityPins; });
   }
 
   void _toggleLike(int index) => setState(() => _liked[index] = !(_liked[index] ?? false));
@@ -172,6 +179,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           _FeedList(
             posts: _allPosts,
             savedPins: _savedPins,
+            communityPins: _communityPins,
             liked: _liked,
             saved: _saved,
             onLike: _toggleLike,
@@ -180,6 +188,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           _FeedList(
             posts: _allPosts.where((p) => p.isFollowing).toList(),
             savedPins: _savedPins,
+            communityPins: _communityPins,
             liked: _liked,
             saved: _saved,
             onLike: (i) {
@@ -203,6 +212,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
 class _FeedList extends StatelessWidget {
   final List<_FeedPost> posts;
   final List<PinModel> savedPins;
+  final List<({PinModel pin, CommunityModel community})> communityPins;
   final Map<int, bool> liked;
   final Map<int, bool> saved;
   final ValueChanged<int> onLike;
@@ -212,6 +222,7 @@ class _FeedList extends StatelessWidget {
   const _FeedList({
     required this.posts,
     this.savedPins = const [],
+    this.communityPins = const [],
     required this.liked,
     required this.saved,
     required this.onLike,
@@ -222,7 +233,8 @@ class _FeedList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasSavedPins = savedPins.isNotEmpty;
-    if (posts.isEmpty && !hasSavedPins) {
+    final hasCommunityPins = communityPins.isNotEmpty;
+    if (posts.isEmpty && !hasSavedPins && !hasCommunityPins) {
       return Center(
         child: Text(
           emptyMessage ?? '',
@@ -235,10 +247,7 @@ class _FeedList extends StatelessWidget {
       slivers: [
         if (hasSavedPins) ...[
           SliverToBoxAdapter(
-            child: _SectionLabel(
-              text: '내 핀',
-              count: savedPins.length,
-            ),
+            child: _SectionLabel(text: '내 핀', count: savedPins.length),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -250,28 +259,46 @@ class _FeedList extends StatelessWidget {
             ),
           ),
         ],
-        if (hasSavedPins && posts.isNotEmpty)
+        if (hasCommunityPins) ...[
           SliverToBoxAdapter(
-            child: _SectionLabel(text: '핀플 피드'),
+            child: _SectionLabel(text: '커뮤니티 피드', count: communityPins.length),
           ),
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final post = posts[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: index < posts.length - 1 ? 12 : 0),
-                child: _FeedCard(
-                  post: post,
-                  isLiked: liked[index] ?? false,
-                  isSaved: saved[index] ?? false,
-                  onLike: () => onLike(index),
-                  onSave: () => onSave(index),
-                ),
-              );
-            },
-            childCount: posts.length,
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                final item = communityPins[i];
+                return Padding(
+                  padding: EdgeInsets.only(bottom: i < communityPins.length - 1 ? 12 : 0),
+                  child: _CommunityPinCard(pin: item.pin, community: item.community),
+                );
+              },
+              childCount: communityPins.length,
+            ),
           ),
-        ),
+        ],
+        if (posts.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _SectionLabel(text: hasCommunityPins || hasSavedPins ? '핀플 피드' : null),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final post = posts[index];
+                return Padding(
+                  padding: EdgeInsets.only(bottom: index < posts.length - 1 ? 12 : 0),
+                  child: _FeedCard(
+                    post: post,
+                    isLiked: liked[index] ?? false,
+                    isSaved: saved[index] ?? false,
+                    onLike: () => onLike(index),
+                    onSave: () => onSave(index),
+                  ),
+                );
+              },
+              childCount: posts.length,
+            ),
+          ),
+        ],
         const SliverPadding(padding: EdgeInsets.only(top: 12, bottom: 12)),
       ],
     );
@@ -279,18 +306,19 @@ class _FeedList extends StatelessWidget {
 }
 
 class _SectionLabel extends StatelessWidget {
-  final String text;
+  final String? text;
   final int? count;
-  const _SectionLabel({required this.text, this.count});
+  const _SectionLabel({this.text, this.count});
 
   @override
   Widget build(BuildContext context) {
+    if (text == null) return const SizedBox(height: 16);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       child: Row(
         children: [
           Text(
-            text,
+            text!,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textSecondary),
           ),
           if (count != null) ...[
@@ -460,7 +488,7 @@ class _MyPinCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFDDE8D0), Color(0xFFCFDFC7)],
+          colors: [Color(0xFFF5EDE2), Color(0xFFEEE0CF)],
         ),
       ),
       child: Center(
@@ -480,6 +508,106 @@ class _MyPinCard extends StatelessWidget {
   }
 }
 
+// ─── 커뮤니티 핀 카드 ─────────────────────────────────────────────────────────
+
+class _CommunityPinCard extends StatelessWidget {
+  final PinModel pin;
+  final CommunityModel community;
+  const _CommunityPinCard({required this.pin, required this.community});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => _SavedPinDetailScreen(pin: pin))),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              child: _buildPhoto(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(color: community.color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                        child: Center(child: Text(community.emoji, style: const TextStyle(fontSize: 12))),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(community.name,
+                          style: TextStyle(fontSize: 12, color: community.color, fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Text(_timeAgo(pin.createdAt),
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(pin.title,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                  if (pin.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(pin.description,
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(pin.category,
+                        style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoto() {
+    if (pin.photoPath != null && !kIsWeb) {
+      return Image.file(File(pin.photoPath!), width: double.infinity, height: 160, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholder());
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() => Container(
+    width: double.infinity, height: 90,
+    decoration: BoxDecoration(gradient: LinearGradient(
+      colors: [community.color.withValues(alpha: 0.12), community.color.withValues(alpha: 0.06)],
+    )),
+    child: Center(child: Text(community.emoji, style: const TextStyle(fontSize: 36))),
+  );
+}
+
 // ─── 저장 핀 상세 화면 ─────────────────────────────────────────────────────────
 
 class _SavedPinDetailScreen extends StatefulWidget {
@@ -492,6 +620,30 @@ class _SavedPinDetailScreen extends StatefulWidget {
 
 class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
   final _mapCtrl = Completer<GoogleMapController>();
+  LandmarkInfo? _landmarkInfo;
+  bool _isLoadingInfo = true;
+  String? _mapStyle;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLandmarkInfo();
+    _loadMapStyle();
+  }
+
+  Future<void> _loadMapStyle() async {
+    final style = await rootBundle.loadString('assets/map_style.json');
+    if (mounted) setState(() => _mapStyle = style);
+  }
+
+  Future<void> _loadLandmarkInfo() async {
+    final info = await LandmarkInfoService.fetchInfo(
+      placeName: widget.pin.title,
+      lat: widget.pin.lat,
+      lng: widget.pin.lng,
+    );
+    if (mounted) setState(() { _landmarkInfo = info; _isLoadingInfo = false; });
+  }
 
   Future<void> _openNavigation() async {
     final uri = Uri.parse(
@@ -544,6 +696,7 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                 myLocationButtonEnabled: false,
                 scrollGesturesEnabled: false,
                 zoomGesturesEnabled: false,
+                style: _mapStyle,
                 markers: {
                   Marker(
                     markerId: const MarkerId('dest'),
@@ -647,6 +800,13 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                       ),
                     ),
                   ],
+                  // AI 장소 정보 카드
+                  const SizedBox(height: 20),
+                  _LandmarkInfoWidget(
+                    isLoading: _isLoadingInfo,
+                    info: _landmarkInfo,
+                    onRefresh: _loadLandmarkInfo,
+                  ),
                   const SizedBox(height: 28),
                   Row(
                     children: [
@@ -892,6 +1052,30 @@ class _PinDetailScreen extends StatefulWidget {
 
 class _PinDetailScreenState extends State<_PinDetailScreen> {
   final _mapCtrl = Completer<GoogleMapController>();
+  LandmarkInfo? _landmarkInfo;
+  bool _isLoadingInfo = true;
+  String? _mapStyle;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLandmarkInfo();
+    _loadMapStyle();
+  }
+
+  Future<void> _loadMapStyle() async {
+    final style = await rootBundle.loadString('assets/map_style.json');
+    if (mounted) setState(() => _mapStyle = style);
+  }
+
+  Future<void> _loadLandmarkInfo() async {
+    final info = await LandmarkInfoService.fetchInfo(
+      placeName: widget.post.location,
+      lat: widget.post.lat,
+      lng: widget.post.lng,
+    );
+    if (mounted) setState(() { _landmarkInfo = info; _isLoadingInfo = false; });
+  }
 
   Future<void> _openNavigation() async {
     final uri = Uri.parse(
@@ -944,6 +1128,7 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                 myLocationButtonEnabled: false,
                 scrollGesturesEnabled: false,
                 zoomGesturesEnabled: false,
+                style: _mapStyle,
                 markers: {
                   Marker(
                     markerId: const MarkerId('dest'),
@@ -1025,6 +1210,13 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  // AI 장소 정보 카드
+                  const SizedBox(height: 16),
+                  _LandmarkInfoWidget(
+                    isLoading: _isLoadingInfo,
+                    info: _landmarkInfo,
+                    onRefresh: _loadLandmarkInfo,
                   ),
                   const SizedBox(height: 28),
                   Row(
@@ -1119,7 +1311,7 @@ class _MapThumbnail extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFDDE8D0), Color(0xFFCFDFC7)],
+                colors: [Color(0xFFF5EDE2), Color(0xFFEEE0CF)],
               ),
             ),
           ),
@@ -1204,20 +1396,221 @@ class _MapThumbnail extends StatelessWidget {
   }
 }
 
+// ─── AI 장소 정보 위젯 ─────────────────────────────────────────────────────────
+
+class _LandmarkInfoWidget extends StatelessWidget {
+  final bool isLoading;
+  final LandmarkInfo? info;
+  final VoidCallback onRefresh;
+
+  const _LandmarkInfoWidget({
+    required this.isLoading,
+    required this.info,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE8F0FE)),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'AI 장소 정보를 불러오는 중...',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (info == null) return const SizedBox.shrink();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8F0FE)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome, size: 14, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                const Text(
+                  'AI 장소 정보',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    info!.sourceLabel,
+                    style: const TextStyle(fontSize: 9, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: onRefresh,
+                  child: const Icon(Icons.refresh, size: 16, color: AppTheme.primary),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _LandmarkRow(
+                  icon: Icons.history_edu_outlined,
+                  label: '유래/역사',
+                  text: info!.origin,
+                ),
+                const SizedBox(height: 10),
+                _LandmarkRow(
+                  icon: Icons.place_outlined,
+                  label: '볼거리/특징',
+                  text: info!.highlights,
+                ),
+                if (info!.bestTime != null && info!.bestTime!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _LandmarkRow(
+                    icon: Icons.calendar_today_outlined,
+                    label: '방문 시기',
+                    text: info!.bestTime!,
+                  ),
+                ],
+                if (info!.tip != null && info!.tip!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _LandmarkRow(
+                    icon: Icons.tips_and_updates_outlined,
+                    label: '방문 팁',
+                    text: info!.tip!,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LandmarkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String text;
+
+  const _LandmarkRow({required this.icon, required this.label, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: AppTheme.primary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _ThumbnailRoadPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.55)
-      ..strokeWidth = 5
+    // 지도 스타일과 동일: 도로=흰색, 공원=연두, 강=연파랑
+    final parkPaint = Paint()
+      ..color = const Color(0xFFD4E8C8)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(0, size.height * 0.6, size.width * 0.3, size.height * 0.4), parkPaint);
+
+    final waterPaint = Paint()
+      ..color = const Color(0xFFC5D8F0)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.72, 0, size.width * 0.28, size.height * 0.35), waterPaint);
+
+    final road = Paint()
+      ..color = Colors.white.withValues(alpha: 0.85)
+      ..strokeWidth = 6
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height * 0.45), Offset(size.width, size.height * 0.50), paint);
-    canvas.drawLine(Offset(size.width * 0.4, 0), Offset(size.width * 0.45, size.height), paint);
+    canvas.drawLine(Offset(0, size.height * 0.45), Offset(size.width, size.height * 0.50), road);
+    canvas.drawLine(Offset(size.width * 0.38, 0), Offset(size.width * 0.43, size.height), road);
+
+    final highway = Paint()
+      ..color = const Color(0xFFFFE0CC).withValues(alpha: 0.9)
+      ..strokeWidth = 10
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, size.height * 0.22), Offset(size.width, size.height * 0.25), highway);
+
     final thin = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width * 0.5, size.height * 0.6), thin);
+    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width * 0.5, size.height * 0.62), thin);
+    canvas.drawLine(Offset(size.width * 0.6, size.height), Offset(size.width, size.height * 0.5), thin);
   }
 
   @override

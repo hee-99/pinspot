@@ -13,6 +13,7 @@ class CommunityModel {
   final bool isPrivate;
   final String? joinCode;
   final DateTime createdAt;
+  final String? imagePath;
 
   const CommunityModel({
     required this.id,
@@ -27,6 +28,7 @@ class CommunityModel {
     required this.isPrivate,
     this.joinCode,
     required this.createdAt,
+    this.imagePath,
   });
 
   Color get color => Color(colorValue);
@@ -43,6 +45,7 @@ class CommunityModel {
     'isPrivate': isPrivate,
     'joinCode': joinCode,
     'createdAt': createdAt.toIso8601String(),
+    'imagePath': imagePath,
   };
 
   factory CommunityModel.fromJson(Map<String, dynamic> j, {bool isJoined = false}) =>
@@ -59,9 +62,10 @@ class CommunityModel {
         joinCode: j['joinCode'] as String?,
         isJoined: isJoined,
         createdAt: DateTime.parse(j['createdAt'] as String),
+        imagePath: j['imagePath'] as String?,
       );
 
-  CommunityModel copyWith({bool? isJoined, int? pinCount, int? memberCount}) =>
+  CommunityModel copyWith({bool? isJoined, int? pinCount, int? memberCount, String? imagePath}) =>
       CommunityModel(
         id: id,
         name: name,
@@ -75,5 +79,6 @@ class CommunityModel {
         isPrivate: isPrivate,
         joinCode: joinCode,
         createdAt: createdAt,
+        imagePath: imagePath ?? this.imagePath,
       );
 }

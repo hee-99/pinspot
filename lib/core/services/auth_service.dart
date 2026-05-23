@@ -3,10 +3,22 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
+
+// ★ Google Cloud Console(https://console.cloud.google.com)에서 발급받은
+//   OAuth 2.0 웹 클라이언트 ID로 교체하세요.
+const String _googleWebClientId = 'YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com';
+
+final _googleSignIn = GoogleSignIn(
+  clientId: kIsWeb ? _googleWebClientId : null,
+  serverClientId: kIsWeb ? null : _googleWebClientId,
+  scopes: ['email', 'profile'],
+);
 
 class AuthService {
   static const _userKey = 'auth_user';
@@ -26,9 +38,9 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
-    // 각 SDK 토큰도 만료 처리
     try { await kakao.UserApi.instance.logout(); } catch (_) {}
     try { await FlutterNaverLogin.logOut(); } catch (_) {}
+    try { await _googleSignIn.signOut(); } catch (_) {}
   }
 
   static Future<bool> isLoggedIn() async => (await getUser()) != null;
@@ -92,23 +104,45 @@ class AuthService {
       if (result.status != NaverLoginStatus.loggedIn) return null;
 
       final acc = result.account;
-      final name = acc.name.isNotEmpty
-          ? acc.name
-          : acc.nickname.isNotEmpty
-              ? acc.nickname
+      final name = (acc?.name?.isNotEmpty == true)
+          ? acc!.name!
+          : (acc?.nickname?.isNotEmpty == true)
+              ? acc!.nickname!
               : '네이버 유저';
 
       final user = UserModel(
-        id: acc.id,
+        id: acc?.id ?? _uuid(),
         name: name,
-        email: acc.email.isNotEmpty ? acc.email : null,
+        email: acc?.email?.isNotEmpty == true ? acc!.email : null,
         provider: 'naver',
-        photoUrl: acc.profileImage.isNotEmpty ? acc.profileImage : null,
+        photoUrl: acc?.profileImage?.isNotEmpty == true ? acc!.profileImage : null,
       );
       await _save(user);
       return user;
     } catch (e) {
       debugPrint('Naver sign-in error: $e');
+      rethrow;
+    }
+  }
+
+  // ── 구글 로그인 ───────────────────────────────────────────────────────────────
+
+  static Future<UserModel?> signInWithGoogle() async {
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) return null; // 사용자 취소
+
+      final user = UserModel(
+        id: account.id,
+        name: account.displayName ?? '구글 유저',
+        email: account.email,
+        provider: 'google',
+        photoUrl: account.photoUrl,
+      );
+      await _save(user);
+      return user;
+    } catch (e) {
+      debugPrint('Google sign-in error: $e');
       rethrow;
     }
   }
@@ -148,6 +182,79 @@ class AuthService {
       debugPrint('Apple sign-in error: $e');
       rethrow;
     }
+  }
+
+  // ── 이메일 자체 로그인 ────────────────────────────────────────────────────────
+
+  static const _emailAccountsKey = 'email_accounts';
+
+  static Future<UserModel?> signInWithEmail(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_emailAccountsKey);
+    if (raw == null) return null;
+    final accounts = json.decode(raw) as Map<String, dynamic>;
+    final key = email.toLowerCase().trim();
+    if (!accounts.containsKey(key)) return null;
+    final acct = accounts[key] as Map<String, dynamic>;
+    final inputHash = sha256.convert(utf8.encode(password)).toString();
+    if (acct['passwordHash'] != inputHash) return null;
+    final user = UserModel(
+      id: 'email_$key',
+      name: acct['name'] as String,
+      email: email.trim(),
+      provider: 'email',
+    );
+    await _save(user);
+    return user;
+  }
+
+  static Future<UserModel> registerWithEmail({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_emailAccountsKey);
+    final accounts = raw != null
+        ? json.decode(raw) as Map<String, dynamic>
+        : <String, dynamic>{};
+    final key = email.toLowerCase().trim();
+    accounts[key] = {
+      'name': name.trim(),
+      'passwordHash': sha256.convert(utf8.encode(password)).toString(),
+    };
+    await prefs.setString(_emailAccountsKey, json.encode(accounts));
+    final user = UserModel(
+      id: 'email_$key',
+      name: name.trim(),
+      email: email.trim(),
+      provider: 'email',
+    );
+    await _save(user);
+    return user;
+  }
+
+  static Future<UserModel?> updateProfile({required String name, String? localPhotoPath}) async {
+    final current = await getUser();
+    if (current == null) return null;
+    final updated = UserModel(
+      id: current.id,
+      name: name.trim().isEmpty ? current.name : name.trim(),
+      email: current.email,
+      provider: current.provider,
+      photoUrl: current.photoUrl,
+      localPhotoPath: localPhotoPath ?? current.localPhotoPath,
+    );
+    await _save(updated);
+    return updated;
+  }
+
+  static Future<bool> emailExists(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_emailAccountsKey);
+    if (raw == null) return false;
+    final accounts = json.decode(raw) as Map<String, dynamic>;
+    return accounts.containsKey(email.toLowerCase().trim());
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

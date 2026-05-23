@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/models/landmark_info_model.dart';
 import '../../../core/models/pin_model.dart';
+import '../../../core/models/community_model.dart';
 import '../../../core/services/category_service.dart';
+import '../../../core/services/community_service.dart';
+import '../../../core/services/landmark_info_service.dart';
 import '../../../core/services/pin_service.dart';
 
 class CreatePinScreen extends StatefulWidget {
@@ -19,7 +23,8 @@ class CreatePinScreen extends StatefulWidget {
 class _CreatePinScreenState extends State<CreatePinScreen> {
   static const double _maxDistance = 500.0;
 
-  int _step = 0; // 0: source, 1: verify, 2: input, 3: done
+  int _step = 0; // 0: source, 1: verify, 2: input, 3: share, 4: done
+  PinModel? _savedPin;
 
   XFile? _pickedFile;
   bool _isVerifying = false;
@@ -195,7 +200,16 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     await PinService.savePin(pin);
     PinRefreshNotifier.instance.notifyPinAdded();
 
-    if (mounted) setState(() { _isSubmitting = false; _step = 3; });
+    if (mounted) setState(() { _isSubmitting = false; _savedPin = pin; _step = 3; });
+  }
+
+  Future<void> _shareToCommunities(List<String> communityIds) async {
+    if (_savedPin != null) {
+      for (final id in communityIds) {
+        await CommunityService.addCommunityPin(id, _savedPin!);
+      }
+    }
+    if (mounted) setState(() => _step = 4);
   }
 
   bool _isValidLatLng(double lat, double lng) =>
@@ -213,7 +227,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          ['사진 선택', '위치 확인', '핀 정보 입력', '등록 완료'][_step],
+          ['사진 선택', '위치 확인', '핀 정보 입력', '커뮤니티 공유', '등록 완료'][_step],
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         centerTitle: true,
@@ -241,9 +255,16 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               titleCtrl: _titleCtrl,
               descCtrl: _descCtrl,
               isSubmitting: _isSubmitting,
+              lat: _pinLat,
+              lng: _pinLng,
               onCategorySelect: (c) => setState(() => _selectedCategory = c),
               onAddCategory: _addNewCategory,
               onSubmit: _submit,
+            ),
+            _ShareStep(
+              pin: _savedPin,
+              onShare: _shareToCommunities,
+              onSkip: () => setState(() => _step = 4),
             ),
             _DoneStep(onClose: () => Navigator.of(context).pop()),
           ][_step],
@@ -520,6 +541,8 @@ class _InputStep extends StatefulWidget {
   final TextEditingController titleCtrl;
   final TextEditingController descCtrl;
   final bool isSubmitting;
+  final double? lat;
+  final double? lng;
   final ValueChanged<String> onCategorySelect;
   final Future<void> Function(String) onAddCategory;
   final VoidCallback onSubmit;
@@ -532,6 +555,8 @@ class _InputStep extends StatefulWidget {
     required this.titleCtrl,
     required this.descCtrl,
     required this.isSubmitting,
+    this.lat,
+    this.lng,
     required this.onCategorySelect,
     required this.onAddCategory,
     required this.onSubmit,
@@ -542,6 +567,35 @@ class _InputStep extends StatefulWidget {
 }
 
 class _InputStepState extends State<_InputStep> {
+  LandmarkInfo? _aiInfo;
+  bool _isLoadingAi = false;
+
+  Future<void> _fetchAiInfo() async {
+    final title = widget.titleCtrl.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('먼저 장소 이름을 입력해주세요.'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    setState(() { _isLoadingAi = true; _aiInfo = null; });
+    final info = await LandmarkInfoService.fetchInfo(
+      placeName: title,
+      lat: widget.lat,
+      lng: widget.lng,
+    );
+    if (mounted) setState(() { _isLoadingAi = false; _aiInfo = info; });
+  }
+
+  void _useAiDescription() {
+    if (_aiInfo == null) return;
+    widget.descCtrl.text = _aiInfo!.suggestedDescription;
+  }
+
   void _showAddCategoryDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -699,6 +753,14 @@ class _InputStepState extends State<_InputStep> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
+          const SizedBox(height: 8),
+          // AI 장소 정보 버튼
+          _AiInfoSection(
+            isLoading: _isLoadingAi,
+            info: _aiInfo,
+            onFetch: _fetchAiInfo,
+            onUseDescription: _useAiDescription,
+          ),
           const SizedBox(height: 20),
           const Text('설명', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
@@ -748,6 +810,381 @@ class _InputStepState extends State<_InputStep> {
     );
   }
 }
+
+// ─── AI 장소 정보 섹션 ────────────────────────────────────────────────────────
+
+class _AiInfoSection extends StatelessWidget {
+  final bool isLoading;
+  final LandmarkInfo? info;
+  final VoidCallback onFetch;
+  final VoidCallback onUseDescription;
+
+  const _AiInfoSection({
+    required this.isLoading,
+    required this.info,
+    required this.onFetch,
+    required this.onUseDescription,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: isLoading ? null : onFetch,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isLoading
+                  ? AppTheme.primary.withValues(alpha: 0.05)
+                  : const Color(0xFFF0F7FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppTheme.primary.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.primary,
+                    ),
+                  )
+                else
+                  const Icon(Icons.auto_awesome, size: 15, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  isLoading ? 'AI 장소 정보 불러오는 중...' : 'AI로 장소 정보 가져오기',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (info != null) ...[
+          const SizedBox(height: 12),
+          _LandmarkInfoCard(info: info!, onUseDescription: onUseDescription),
+        ],
+      ],
+    );
+  }
+}
+
+class _LandmarkInfoCard extends StatelessWidget {
+  final LandmarkInfo info;
+  final VoidCallback onUseDescription;
+
+  const _LandmarkInfoCard({required this.info, required this.onUseDescription});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8F0FE)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome, size: 14, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                const Text(
+                  'AI 장소 정보',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    info.sourceLabel,
+                    style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(icon: Icons.history_edu_outlined, label: '유래/역사', text: info.origin),
+                const SizedBox(height: 10),
+                _InfoRow(icon: Icons.place_outlined, label: '볼거리/특징', text: info.highlights),
+                if (info.bestTime != null && info.bestTime!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _InfoRow(icon: Icons.calendar_today_outlined, label: '방문 시기', text: info.bestTime!),
+                ],
+                if (info.tip != null && info.tip!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _InfoRow(icon: Icons.tips_and_updates_outlined, label: '방문 팁', text: info.tip!),
+                ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onUseDescription,
+                    icon: const Icon(Icons.edit_note, size: 16, color: Colors.white),
+                    label: const Text(
+                      '이 내용으로 설명 채우기',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String text;
+
+  const _InfoRow({required this.icon, required this.label, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: AppTheme.primary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── 커뮤니티 공유 단계 ──────────────────────────────────────────────────────────
+
+class _ShareStep extends StatefulWidget {
+  final PinModel? pin;
+  final Future<void> Function(List<String> communityIds) onShare;
+  final VoidCallback onSkip;
+
+  const _ShareStep({required this.pin, required this.onShare, required this.onSkip});
+
+  @override
+  State<_ShareStep> createState() => _ShareStepState();
+}
+
+class _ShareStepState extends State<_ShareStep> {
+  List<CommunityModel> _communities = [];
+  final Set<String> _selected = {};
+  bool _loading = true;
+  bool _sharing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final all = await CommunityService.getCommunities();
+    if (mounted) setState(() { _communities = all.where((c) => c.isJoined).toList(); _loading = false; });
+  }
+
+  Future<void> _share() async {
+    setState(() => _sharing = true);
+    await widget.onShare(_selected.toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+    }
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('커뮤니티에 공유할까요?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text('멤버들과 이 핀을 함께 즐겨보세요',
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          const SizedBox(height: 24),
+          if (_communities.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.background,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.people_outline, size: 44, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+                  const SizedBox(height: 10),
+                  const Text('아직 참여한 커뮤니티가 없어요',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                ],
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: _communities.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) {
+                  final c = _communities[i];
+                  final isSelected = _selected.contains(c.id);
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      if (isSelected) { _selected.remove(c.id); }
+                      else { _selected.add(c.id); }
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isSelected ? c.color.withValues(alpha: 0.07) : AppTheme.background,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? c.color : const Color(0xFFEEEEEE),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(
+                              color: c.color.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(child: Text(c.emoji, style: const TextStyle(fontSize: 22))),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(c.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                Text(c.description, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 24, height: 24,
+                            decoration: BoxDecoration(
+                              color: isSelected ? c.color : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: isSelected ? c.color : const Color(0xFFCCCCCC), width: 2),
+                            ),
+                            child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity, height: 52,
+            child: ElevatedButton(
+              onPressed: (_sharing || _selected.isEmpty) ? null : _share,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                disabledBackgroundColor: const Color(0xFFE0E0E0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: _sharing
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(
+                      _selected.isEmpty ? '커뮤니티를 선택하세요' : '${_selected.length}개 커뮤니티에 공유하기',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity, height: 52,
+            child: TextButton(
+              onPressed: _sharing ? null : widget.onSkip,
+              child: const Text('건너뛰기', style: TextStyle(fontSize: 15, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 완료 화면 ────────────────────────────────────────────────────────────────
 
 class _DoneStep extends StatelessWidget {
   final VoidCallback onClose;
