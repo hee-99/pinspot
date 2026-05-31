@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../feed/screens/feed_screen.dart';
 import '../../map/screens/map_screen.dart';
 import '../../community/screens/community_screen.dart';
@@ -15,7 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 1;
+  int _currentIndex = 1; // 기본: 지도
 
   static const _screens = [
     FeedScreen(),
@@ -56,19 +57,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 2) return;
+    if (index == 2) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const CreatePinScreen()),
+      );
+      return;
+    }
     setState(() => _currentIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      floatingActionButton: _PinFab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      backgroundColor: AppColors.neutral50,
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: _BottomNav(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
@@ -77,31 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _PinFab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CreatePinScreen()),
-        );
-      },
-      child: Container(
-        width: 58,
-        height: 58,
-        decoration: BoxDecoration(
-          color: AppTheme.primary,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: AppTheme.primary.withValues(alpha: 0.27), blurRadius: 12, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: const Icon(Icons.add_location_alt, color: Colors.white, size: 28),
-      ),
-    );
-  }
-}
-
+// ── Bottom Navigation ─────────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -110,22 +88,65 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      color: AppTheme.surface,
-      elevation: 8,
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.explore_outlined, activeIcon: Icons.explore, label: '피드', index: 0, currentIndex: currentIndex, onTap: onTap),
-            _NavItem(icon: Icons.map_outlined, activeIcon: Icons.map, label: '지도', index: 1, currentIndex: currentIndex, onTap: onTap),
-            const SizedBox(width: 58), // FAB 자리
-            _NavItem(icon: Icons.groups_outlined, activeIcon: Icons.groups, label: '커뮤니티', index: 3, currentIndex: currentIndex, onTap: onTap),
-            _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: '프로필', index: 4, currentIndex: currentIndex, onTap: onTap),
-          ],
+    final l = AppLocalizations.of(context);
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.neutral200, width: 0.8)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              _NavItem(icon: Icons.explore_outlined,  activeIcon: Icons.explore,  label: l.navFeed,      index: 0, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.map_outlined,       activeIcon: Icons.map,      label: l.navMap,       index: 1, current: currentIndex, onTap: onTap),
+              // 중앙 핀 버튼
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(17),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_location_alt_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        l.navPin,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              _NavItem(icon: Icons.groups_outlined,  activeIcon: Icons.groups,  label: l.navCommunity, index: 3, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline,   activeIcon: Icons.person,  label: l.navProfile,   index: 4, current: currentIndex, onTap: onTap),
+            ],
+          ),
         ),
       ),
     );
@@ -137,41 +158,51 @@ class _NavItem extends StatelessWidget {
   final IconData activeIcon;
   final String label;
   final int index;
-  final int currentIndex;
+  final int current;
   final ValueChanged<int> onTap;
 
   const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.index,
-    required this.currentIndex,
-    required this.onTap,
+    required this.icon, required this.activeIcon, required this.label,
+    required this.index, required this.current, required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isActive = currentIndex == index;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onTap(index),
-      child: SizedBox(
-        width: 60,
+    final active = current == index;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onTap(index),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive ? AppTheme.primary : AppTheme.textSecondary,
-              size: 24,
+            // 액티브 인디케이터 (상단 점)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: active ? 18 : 0,
+              height: 3,
+              margin: const EdgeInsets.only(bottom: 5),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: 2),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: Icon(
+                active ? activeIcon : icon,
+                key: ValueKey(active),
+                color: active ? AppColors.primary : AppColors.neutral400,
+                size: 22,
+              ),
+            ),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: isActive ? AppTheme.primary : AppTheme.textSecondary,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                color: active ? AppColors.primary : AppColors.neutral400,
               ),
             ),
           ],
@@ -181,55 +212,70 @@ class _NavItem extends StatelessWidget {
   }
 }
 
+// ── 개인정보 동의 시트 ─────────────────────────────────────────────────────────
 class _PrivacyNoticeSheet extends StatelessWidget {
   final VoidCallback onAccept;
   const _PrivacyNoticeSheet({required this.onAccept});
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
               children: [
-                Icon(Icons.privacy_tip_outlined, color: AppTheme.primary),
-                SizedBox(width: 10),
-                Text('개인정보 처리 안내',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Text(l.privacyTitle,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              '핀스팟은 아래 정보를 수집합니다:\n\n'
-              '• 위치 정보: 핀 등록 및 지도 표시에 사용\n'
-              '• 사진: 핀 등록 시 첨부 (기기에만 저장)\n'
-              '• 핀 데이터: 기기 내부 저장소에만 보관\n\n'
-              '수집된 정보는 외부 서버로 전송되지 않으며,\n'
-              '앱 삭제 시 모든 데이터가 함께 삭제됩니다.',
-              style: TextStyle(fontSize: 13, height: 1.7, color: Color(0xFF555555)),
+            Text(
+              l.privacyContent,
+              style: const TextStyle(fontSize: 13, height: 1.75, color: AppColors.neutral600),
             ),
             const SizedBox(height: 24),
             SizedBox(
-              width: double.infinity,
-              height: 52,
+              width: double.infinity, height: 52,
               child: ElevatedButton(
                 onPressed: onAccept,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                child: const Text('확인했어요',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                child: Text(l.privacyAccept,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

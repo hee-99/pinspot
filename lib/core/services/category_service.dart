@@ -5,6 +5,7 @@ class CategoryService {
 
   static const defaultCategories = [
     '등산/명산', '조각상/공공예술', '사진 명소', '폐허/어반', '계곡/자연',
+    '⚠️ 위험 지역',
   ];
 
   static Future<List<String>> getCategories() async {

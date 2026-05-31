@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/models/community_model.dart';
 import '../../../core/services/community_service.dart';
 import 'create_community_screen.dart';
@@ -113,12 +113,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.neutral50,
       body: CustomScrollView(
         slivers: [
           // ── 앱바 ─────────────────────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: AppTheme.surface,
+            backgroundColor: AppColors.surface,
             elevation: 0,
             floating: true,
             snap: true,
@@ -130,7 +130,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     style: const TextStyle(fontSize: 15),
                     decoration: InputDecoration(
                       hintText: '커뮤니티 검색',
-                      hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.6), fontSize: 15),
+                      hintStyle: TextStyle(color: AppColors.neutral500.withValues(alpha: 0.6), fontSize: 15),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -142,11 +142,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
             actions: [
               IconButton(
                 icon: Icon(_showSearch ? Icons.close : Icons.search_rounded,
-                    color: AppTheme.textPrimary, size: 22),
+                    color: AppColors.neutral900, size: 22),
                 onPressed: _toggleSearch,
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary, size: 24),
+                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 24),
                 tooltip: '커뮤니티 만들기',
                 onPressed: _openCreate,
               ),
@@ -156,7 +156,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
           if (_loading)
             const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
             )
           else ...[
             // ── 빠른 액션 ─────────────────────────────────────────────────
@@ -170,7 +170,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         icon: Icons.add_circle_rounded,
                         label: '커뮤니티 만들기',
                         description: '나만의 스폿 공유방',
-                        color: AppTheme.primary,
+                        color: AppColors.primary,
                         onTap: _openCreate,
                       ),
                     ),
@@ -180,7 +180,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         icon: Icons.vpn_key_rounded,
                         label: '코드로 참여',
                         description: '초대코드 6자리 입력',
-                        color: const Color(0xFF5C6BC0),
+                        color: const Color(0xFF0284C7),
                         onTap: _showJoinByCode,
                       ),
                     ),
@@ -197,10 +197,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   child: Column(
                     children: [
                       Icon(Icons.search_off_rounded, size: 56,
-                          color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                          color: AppColors.neutral500.withValues(alpha: 0.3)),
                       const SizedBox(height: 12),
                       Text('"$_searchQuery" 결과가 없어요',
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                          style: const TextStyle(color: AppColors.neutral500, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -240,10 +240,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   child: Column(
                     children: [
                       Icon(Icons.people_outline, size: 52,
-                          color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                          color: AppColors.neutral500.withValues(alpha: 0.3)),
                       const SizedBox(height: 12),
                       const Text('모든 커뮤니티에 참여 중이에요 🎉',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                          style: TextStyle(color: AppColors.neutral500, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -284,17 +284,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('$count',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w700)),
+                    style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
           if (sub != null) ...[
             const SizedBox(height: 3),
-            Text(sub, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
           ],
         ],
       ),
@@ -340,7 +340,7 @@ class _QuickActionCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
             const SizedBox(height: 2),
-            Text(description, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+            Text(description, style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
           ],
         ),
       ),
@@ -388,7 +388,7 @@ class _JoinedCard extends StatelessWidget {
       child: Container(
         width: 140,
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 12, offset: const Offset(0, 4))
@@ -436,29 +436,36 @@ class _ExploreCard extends StatelessWidget {
 
   const _ExploreCard({required this.community, required this.onTap, required this.onJoin});
 
-  Widget _sideBanner(Color color) {
+  Widget _topBanner(Color color) {
     if (community.imagePath != null && !kIsWeb) {
       return SizedBox(
-        width: 80, height: 96,
-        child: Image.file(
-          File(community.imagePath!),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _emojiSideBanner(color),
-        ),
+        height: 90, width: double.infinity,
+        child: Image.file(File(community.imagePath!), fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _emojiBanner(color)),
       );
     }
-    return _emojiSideBanner(color);
+    return _emojiBanner(color);
   }
 
-  Widget _emojiSideBanner(Color color) => Container(
-    width: 80, height: 96,
+  Widget _emojiBanner(Color color) => Container(
+    height: 90,
     decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
+        colors: [
+          Color.fromARGB(255, (color.r * 0.5).round(), (color.g * 0.4).round(), (color.b * 0.5).round()),
+          color.withValues(alpha: 0.85),
+        ],
       ),
     ),
-    child: Center(child: Text(community.emoji, style: const TextStyle(fontSize: 36))),
+    child: Stack(
+      children: [
+        Positioned(right: -10, top: -10,
+          child: Opacity(opacity: 0.15,
+            child: Text(community.emoji, style: const TextStyle(fontSize: 90)))),
+        Center(child: Text(community.emoji, style: const TextStyle(fontSize: 38))),
+      ],
+    ),
   );
 
   @override
@@ -468,65 +475,57 @@ class _ExploreCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(18),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4)),
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sideBanner(color),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(community.name,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 3),
-                    Text(community.description,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.people_outline, size: 13, color: color),
-                        const SizedBox(width: 3),
-                        Text(_fmt(community.memberCount),
-                            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 10),
-                        const Icon(Icons.location_on_outlined, size: 13, color: AppTheme.textSecondary),
-                        const SizedBox(width: 3),
-                        Text('${_fmt(community.pinCount)}핀',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // 참여 버튼
+            _topBanner(color),
             Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: GestureDetector(
-                onTap: onJoin,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(community.name,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                  const SizedBox(height: 3),
+                  Text(community.description,
+                      style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.people_outline, size: 13, color: color),
+                      const SizedBox(width: 4),
+                      Text(_fmt(community.memberCount),
+                          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.location_on_outlined, size: 13, color: AppColors.neutral400),
+                      const SizedBox(width: 3),
+                      Text('${_fmt(community.pinCount)}핀',
+                          style: const TextStyle(fontSize: 11, color: AppColors.neutral400)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: onJoin,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                          ),
+                          child: const Text('참여',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
+                      ),
                     ],
                   ),
-                  child: const Text('참여',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
+                ],
               ),
             ),
           ],
@@ -559,7 +558,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(24),
         ),
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
@@ -570,7 +569,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
               width: 36, height: 4,
               margin: const EdgeInsets.only(top: 12, bottom: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFDDDDDD),
+                color: AppColors.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -579,10 +578,10 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
                 Container(
                   width: 44, height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.vpn_key_rounded, color: AppTheme.primary, size: 22),
+                  child: const Icon(Icons.vpn_key_rounded, color: AppColors.primary, size: 22),
                 ),
                 const SizedBox(width: 14),
                 const Column(
@@ -591,7 +590,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
                     Text('코드로 커뮤니티 참여',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                     Text('초대 코드 6자리를 입력하세요',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        style: TextStyle(fontSize: 12, color: AppColors.neutral500)),
                   ],
                 ),
               ],
@@ -607,7 +606,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 12,
-                color: AppTheme.primary,
+                color: AppColors.primary,
               ),
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
@@ -615,17 +614,17 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
                 hintText: '• • • • • •',
                 hintStyle: TextStyle(
                   fontSize: 22, letterSpacing: 8,
-                  color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                  color: AppColors.neutral500.withValues(alpha: 0.3),
                 ),
                 filled: true,
-                fillColor: AppTheme.primary.withValues(alpha: 0.05),
+                fillColor: AppColors.primary.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 20),
               ),
@@ -641,8 +640,8 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  disabledBackgroundColor: const Color(0xFFE0E0E0),
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: AppColors.neutral200,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),

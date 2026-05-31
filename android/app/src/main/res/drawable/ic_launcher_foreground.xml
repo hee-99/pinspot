@@ -6,15 +6,15 @@
     android:viewportHeight="108">
     <!-- 핀 몸통 -->
     <path
-        android:fillColor="#FF5A35"
+        android:fillColor="#FFFFFF"
         android:pathData="M54,18
             C43,18 34,27 34,38
             C34,53 54,78 54,78
             C54,78 74,53 74,38
             C74,27 65,18 54,18Z" />
-    <!-- 핀 내부 원 (흰색) -->
+    <!-- 핀 내부 원 -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#14532D"
         android:pathData="M54,32
             C49.58,32 46,35.58 46,40
             C46,44.42 49.58,48 54,48

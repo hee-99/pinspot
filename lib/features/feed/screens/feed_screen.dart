@@ -6,13 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/models/landmark_info_model.dart';
 import '../../../core/models/pin_model.dart';
 import '../../../core/models/community_model.dart';
 import '../../../core/services/community_service.dart';
 import '../../../core/services/landmark_info_service.dart';
 import '../../../core/services/pin_service.dart';
+import '../../../core/widgets/translatable_text.dart';
 
 // ─── 더미 데이터 ────────────────────────────────────────────────────────────────
 
@@ -146,12 +148,12 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.neutral50,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppColors.surface,
         title: const Text(
           'PINSPOT',
-          style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: 1),
+          style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, letterSpacing: 1),
         ),
         actions: [
           IconButton(
@@ -161,15 +163,15 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppTheme.primary,
-          unselectedLabelColor: AppTheme.textSecondary,
-          indicatorColor: AppTheme.primary,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.neutral500,
+          indicatorColor: AppColors.primary,
           indicatorWeight: 2,
           labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-          tabs: const [
-            Tab(text: '전체'),
-            Tab(text: '팔로잉'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context).feedTabAll),
+            Tab(text: AppLocalizations.of(context).feedTabFollowing),
           ],
         ),
       ),
@@ -199,7 +201,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
               final realIndex = _allPosts.indexOf(_allPosts.where((p) => p.isFollowing).toList()[i]);
               _toggleSave(realIndex);
             },
-            emptyMessage: '팔로잉한 핀플이 없습니다\n커뮤니티에서 핀플을 찾아보세요',
+            emptyMessage: AppLocalizations.of(context).noFollowing,
           ),
         ],
       ),
@@ -239,7 +241,7 @@ class _FeedList extends StatelessWidget {
         child: Text(
           emptyMessage ?? '',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.6),
+          style: const TextStyle(color: AppColors.neutral500, fontSize: 14, height: 1.6),
         ),
       );
     }
@@ -247,7 +249,7 @@ class _FeedList extends StatelessWidget {
       slivers: [
         if (hasSavedPins) ...[
           SliverToBoxAdapter(
-            child: _SectionLabel(text: '내 핀', count: savedPins.length),
+            child: _SectionLabel(text: AppLocalizations.of(context).myPins, count: savedPins.length),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -261,7 +263,7 @@ class _FeedList extends StatelessWidget {
         ],
         if (hasCommunityPins) ...[
           SliverToBoxAdapter(
-            child: _SectionLabel(text: '커뮤니티 피드', count: communityPins.length),
+            child: _SectionLabel(text: AppLocalizations.of(context).communityFeed, count: communityPins.length),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -278,7 +280,7 @@ class _FeedList extends StatelessWidget {
         ],
         if (posts.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: _SectionLabel(text: hasCommunityPins || hasSavedPins ? '핀플 피드' : null),
+            child: _SectionLabel(text: hasCommunityPins || hasSavedPins ? AppLocalizations.of(context).pinplerFeed : null),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -319,19 +321,19 @@ class _SectionLabel extends StatelessWidget {
         children: [
           Text(
             text!,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textSecondary),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.neutral500),
           ),
           if (count != null) ...[
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -349,114 +351,128 @@ class _MyPinCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDanger = pin.category.contains('위험');
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => _SavedPinDetailScreen(pin: pin)),
-      ),
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => _SavedPinDetailScreen(pin: pin))),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(18),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.09), blurRadius: 20, offset: const Offset(0, 6)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── 풀블리드 사진 + 오버레이 ────────────────────────────────
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: _buildPhoto(),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              child: Stack(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
-                      const SizedBox(width: 3),
+                  SizedBox(height: 220, width: double.infinity, child: _buildPhoto()),
+                  // 카테고리/위험 배지
+                  Positioned(
+                    top: 12, left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isDanger ? const Color(0xFFDC2626) : AppColors.primary,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (isDanger) ...[
+                          const Text('⚠️', style: TextStyle(fontSize: 10)),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(pin.category,
+                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ),
+                  // 바텀 그라디언트 오버레이
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      height: 105,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Color(0xD9000000), Colors.transparent],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 제목 (사진 위)
+                  Positioned(
+                    bottom: 12, left: 14, right: 14,
+                    child: Row(children: [
+                      Icon(
+                        isDanger ? Icons.warning_amber_rounded : Icons.location_on,
+                        size: 14,
+                        color: isDanger ? const Color(0xFFFFB300) : Colors.white,
+                      ),
+                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
+                        child: TranslatableText(
                           pin.title,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w800,
+                            color: Colors.white, letterSpacing: -0.4,
+                            shadows: [Shadow(color: Color(0x66000000), blurRadius: 8)],
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(
-                        _timeAgo(pin.createdAt),
-                        style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                      ),
-                    ],
+                    ]),
                   ),
+                ],
+              ),
+            ),
+            // ── 하단 바 ─────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.schedule_outlined, size: 13, color: AppColors.neutral400),
+                  const SizedBox(width: 4),
+                  Text(_timeAgo(pin.createdAt, context),
+                      style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
                   if (pin.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      pin.description,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: TranslatableText(pin.description,
+                          style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          pin.category,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  ] else
+                    const Spacer(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse(
+                        'https://maps.google.com/?daddr=${pin.lat},${pin.lng}&directionsmode=driving',
+                      );
+                      if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () async {
-                          final uri = Uri.parse(
-                            'https://maps.google.com/?daddr=${pin.lat},${pin.lng}&directionsmode=driving',
-                          );
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.navigation, size: 13, color: AppTheme.primary),
-                              SizedBox(width: 4),
-                              Text(
-                                '길찾기',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.navigation, size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(AppLocalizations.of(context).directions,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ]),
+                    ),
                   ),
                 ],
               ),
@@ -469,13 +485,9 @@ class _MyPinCard extends StatelessWidget {
 
   Widget _buildPhoto() {
     if (pin.photoPath != null && !kIsWeb) {
-      return Image.file(
-        File(pin.photoPath!),
-        width: double.infinity,
-        height: 180,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _photoPlaceholder(),
-      );
+      return Image.file(File(pin.photoPath!),
+          width: double.infinity, height: 220, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _photoPlaceholder());
     }
     return _photoPlaceholder();
   }
@@ -483,26 +495,17 @@ class _MyPinCard extends StatelessWidget {
   Widget _photoPlaceholder() {
     return Container(
       width: double.infinity,
-      height: 100,
+      height: 220,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF5EDE2), Color(0xFFEEE0CF)],
+          colors: [Color(0xFFE8F5EE), Color(0xFFD4EDDC)],
         ),
       ),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_on, size: 28, color: AppTheme.primary.withValues(alpha: 0.5)),
-            const SizedBox(height: 4),
-            Text(
-              '${pin.lat.toStringAsFixed(4)}, ${pin.lng.toStringAsFixed(4)}',
-              style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
+        child: Icon(Icons.location_on_outlined, size: 52,
+            color: AppColors.primary.withValues(alpha: 0.25)),
       ),
     );
   }
@@ -523,7 +526,7 @@ class _CommunityPinCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
         ),
@@ -550,17 +553,17 @@ class _CommunityPinCard extends StatelessWidget {
                       Text(community.name,
                           style: TextStyle(fontSize: 12, color: community.color, fontWeight: FontWeight.w600)),
                       const Spacer(),
-                      Text(_timeAgo(pin.createdAt),
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                      Text(_timeAgo(pin.createdAt, context),
+                          style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                      const Icon(Icons.location_on, size: 14, color: AppColors.primary),
                       const SizedBox(width: 3),
                       Expanded(
-                        child: Text(pin.title,
+                        child: TranslatableText(pin.title,
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                             overflow: TextOverflow.ellipsis),
                       ),
@@ -568,19 +571,19 @@ class _CommunityPinCard extends StatelessWidget {
                   ),
                   if (pin.description.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(pin.description,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    TranslatableText(pin.description,
+                        style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
                         maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(pin.category,
-                        style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -654,8 +657,8 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('지도 앱을 열 수 없습니다'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).mapAppError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -676,14 +679,14 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
   Widget build(BuildContext context) {
     final pin = widget.pin;
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.neutral50,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 260,
             pinned: true,
-            backgroundColor: AppTheme.surface,
-            foregroundColor: AppTheme.textPrimary,
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.neutral900,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               background: GoogleMap(
@@ -701,7 +704,7 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                   Marker(
                     markerId: const MarkerId('dest'),
                     position: LatLng(pin.lat, pin.lng),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(14.0),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
                   ),
                 },
               ),
@@ -718,20 +721,20 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.location_on, size: 13, color: AppTheme.primary),
-                            SizedBox(width: 4),
+                            const Icon(Icons.location_on, size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
                             Text(
-                              '내 핀',
-                              style: TextStyle(
+                              AppLocalizations.of(context).myPinLabel,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.primary,
+                                color: AppColors.primary,
                               ),
                             ),
                           ],
@@ -739,38 +742,38 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        _timeAgo(pin.createdAt),
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        _timeAgo(pin.createdAt, context),
+                        style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  TranslatableText(
                     pin.title,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                      const Icon(Icons.location_on, size: 14, color: AppColors.primary),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           '${pin.lat.toStringAsFixed(4)}, ${pin.lng.toStringAsFixed(4)}',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          style: const TextStyle(fontSize: 13, color: AppColors.neutral500),
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           pin.category,
                           style: const TextStyle(
                             fontSize: 11,
-                            color: AppTheme.primary,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -779,11 +782,11 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                   ),
                   if (pin.description.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Text(
+                    TranslatableText(
                       pin.description,
                       style: const TextStyle(
                         fontSize: 14,
-                        color: AppTheme.textSecondary,
+                        color: AppColors.neutral500,
                         height: 1.6,
                       ),
                     ),
@@ -814,12 +817,12 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _openNavigation,
                           icon: const Icon(Icons.navigation, size: 18, color: Colors.white),
-                          label: const Text(
-                            '길찾기',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                          label: Text(
+                            AppLocalizations.of(context).directions,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
@@ -831,15 +834,15 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
                         height: 50,
                         width: 50,
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                          border: Border.all(color: AppColors.neutral200),
                         ),
                         child: IconButton(
                           onPressed: _share,
                           icon: const Icon(
                             Icons.ios_share_outlined,
-                            color: AppTheme.textPrimary,
+                            color: AppColors.neutral900,
                             size: 20,
                           ),
                         ),
@@ -883,139 +886,150 @@ class _FeedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDanger = post.category.contains('위험');
     return GestureDetector(
       onTap: () => _openDetail(context),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(18),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.09), blurRadius: 20, offset: const Offset(0, 6)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-              child: Row(
+            // ── 풀블리드 지도 + 오버레이 ─────────────────────────────────
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: post.avatarColor,
-                    child: Text(
-                      post.pinplerName[0],
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                  SizedBox(height: 230, width: double.infinity,
+                      child: _MapThumbnail(post: post)),
+                  // 카테고리/위험 배지
+                  Positioned(
+                    top: 12, left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isDanger ? const Color(0xFFDC2626) : post.categoryColor,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (isDanger) ...[
+                          const Text('⚠️', style: TextStyle(fontSize: 10)),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(post.category,
+                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700)),
+                      ]),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  // 바텀 그라디언트 오버레이
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      height: 115,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Color(0xD9000000), Colors.transparent],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 위치 텍스트 (그라디언트 위)
+                  Positioned(
+                    bottom: 12, left: 14, right: 14,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              post.pinplerName,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
+                        Row(children: [
+                          Icon(
+                            isDanger ? Icons.warning_amber_rounded : Icons.location_on,
+                            size: 13,
+                            color: isDanger ? const Color(0xFFFFB300) : Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(post.location,
+                              style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w800,
+                                color: Colors.white, letterSpacing: -0.4,
+                                shadows: [Shadow(color: Color(0x66000000), blurRadius: 8)],
                               ),
-                              child: const Text(
-                                '핀플',
-                                style: TextStyle(fontSize: 9, color: AppTheme.primary, fontWeight: FontWeight.w700),
-                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
-                        Text(
-                          post.handle,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                          ),
+                        ]),
+                        const SizedBox(height: 2),
+                        Text(post.district,
+                          style: TextStyle(fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.78),
+                              shadows: const [Shadow(color: Color(0x44000000), blurRadius: 4)]),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    post.timeAgo,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                  ),
                 ],
               ),
             ),
-            ClipRRect(
-              borderRadius: BorderRadius.zero,
-              child: _MapThumbnail(post: post),
-            ),
+            // ── 유저 정보 + 액션 바 ─────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: post.avatarColor,
+                    child: Text(post.pinplerName[0],
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                post.location,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                        Row(children: [
+                          Text(post.pinplerName,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              post.district,
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            child: Text(
+                              AppLocalizations.of(context).pinpler,
+                              style: const TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.w700),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: post.categoryColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                post.category,
-                                style: TextStyle(fontSize: 10, color: post.categoryColor, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ]),
+                        Text(post.timeAgo,
+                            style: const TextStyle(fontSize: 10, color: AppColors.neutral400)),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
                   Row(
                     children: [
                       _ActionButton(
                         icon: isLiked ? Icons.favorite : Icons.favorite_outline,
                         label: _fmt(post.likes + (isLiked ? 1 : 0)),
-                        color: isLiked ? Colors.redAccent : AppTheme.textSecondary,
+                        color: isLiked ? Colors.redAccent : AppColors.neutral400,
                         onTap: onLike,
                       ),
                       const SizedBox(width: 14),
                       _ActionButton(
                         icon: isSaved ? Icons.bookmark : Icons.bookmark_outline,
                         label: _fmt(post.saves + (isSaved ? 1 : 0)),
-                        color: isSaved ? AppTheme.primary : AppTheme.textSecondary,
+                        color: isSaved ? AppColors.primary : AppColors.neutral400,
                         onTap: onSave,
                       ),
                       const SizedBox(width: 14),
@@ -1024,7 +1038,7 @@ class _FeedCard extends StatelessWidget {
                           '📍 ${post.location} (${post.category})\n${post.district}\n핀스팟에서 발견한 숨겨진 장소!',
                           subject: post.location,
                         ),
-                        child: const Icon(Icons.ios_share_outlined, size: 20, color: AppTheme.textSecondary),
+                        child: const Icon(Icons.ios_share_outlined, size: 18, color: AppColors.neutral400),
                       ),
                     ],
                   ),
@@ -1086,8 +1100,8 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('지도 앱을 열 수 없습니다'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).mapAppError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1108,14 +1122,14 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
   Widget build(BuildContext context) {
     final post = widget.post;
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.neutral50,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 260,
             pinned: true,
-            backgroundColor: AppTheme.surface,
-            foregroundColor: AppTheme.textPrimary,
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.neutral900,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               background: GoogleMap(
@@ -1133,7 +1147,7 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                   Marker(
                     markerId: const MarkerId('dest'),
                     position: LatLng(post.lat, post.lng),
-                    icon: BitmapDescriptor.defaultMarkerWithHue(14.0),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
                   ),
                 },
               ),
@@ -1160,11 +1174,11 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(post.pinplerName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                          Text(post.handle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                          Text(post.handle, style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
                         ],
                       ),
                       const Spacer(),
-                      Text(post.timeAgo, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                      Text(post.timeAgo, style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -1175,9 +1189,9 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
+                      const Icon(Icons.location_on, size: 14, color: AppColors.primary),
                       const SizedBox(width: 3),
-                      Text(post.district, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                      Text(post.district, style: const TextStyle(fontSize: 13, color: AppColors.neutral500)),
                       const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1196,17 +1210,17 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                      border: Border.all(color: AppColors.neutral200),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.gps_fixed, size: 16, color: AppTheme.primary),
+                        const Icon(Icons.gps_fixed, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text(
                           '${post.lat.toStringAsFixed(4)}, ${post.lng.toStringAsFixed(4)}',
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          style: const TextStyle(fontSize: 13, color: AppColors.neutral500),
                         ),
                       ],
                     ),
@@ -1225,12 +1239,12 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _openNavigation,
                           icon: const Icon(Icons.navigation, size: 18, color: Colors.white),
-                          label: const Text(
-                            '길찾기',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                          label: Text(
+                            AppLocalizations.of(context).directions,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
@@ -1242,13 +1256,13 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
                         height: 50,
                         width: 50,
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                          border: Border.all(color: AppColors.neutral200),
                         ),
                         child: IconButton(
                           onPressed: _share,
-                          icon: const Icon(Icons.ios_share_outlined, color: AppTheme.textPrimary, size: 20),
+                          icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
                         ),
                       ),
                     ],
@@ -1301,57 +1315,65 @@ class _MapThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 200,
+      height: 230,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
+          // 다크 나이트맵 배경
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFF5EDE2), Color(0xFFEEE0CF)],
+                colors: [Color(0xFF0D1F12), Color(0xFF1A3A20)],
               ),
             ),
           ),
-          CustomPaint(painter: _ThumbnailRoadPainter()),
+          CustomPaint(painter: _NightMapPainter()),
+          // 핀 마커
           Align(
             alignment: Alignment(
-              (post.pinDx * 2 - 1).clamp(-0.9, 0.9),
-              (post.pinDy * 2 - 1).clamp(-0.9, 0.9),
+              (post.pinDx * 2 - 1).clamp(-0.75, 0.75),
+              (post.pinDy * 2 - 1).clamp(-0.75, 0.75),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // 글로우 링
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: post.avatarColor.withValues(alpha: 0.2),
+                    border: Border.all(color: post.avatarColor.withValues(alpha: 0.5), width: 1),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   decoration: BoxDecoration(
                     color: post.avatarColor,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(
-                        color: post.avatarColor.withValues(alpha: 0.4),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
+                      BoxShadow(color: post.avatarColor.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 3)),
                     ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
-                        radius: 7,
+                        radius: 8,
                         backgroundColor: Colors.white.withValues(alpha: 0.3),
                         child: Text(
                           post.pinplerName[0],
-                          style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
-                        post.location.length > 8 ? '${post.location.substring(0, 8)}…' : post.location,
-                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+                        post.location.length > 9 ? '${post.location.substring(0, 9)}…' : post.location,
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
@@ -1415,21 +1437,21 @@ class _LandmarkInfoWidget extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE8F0FE)),
+          border: Border.all(color: AppColors.neutral200),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
-              'AI 장소 정보를 불러오는 중...',
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              AppLocalizations.of(context).aiLoading,
+              style: const TextStyle(fontSize: 13, color: AppColors.neutral500),
             ),
           ],
         ),
@@ -1440,12 +1462,12 @@ class _LandmarkInfoWidget extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8F0FE)),
+        border: Border.all(color: AppColors.neutral200),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.05),
+            color: AppColors.primary.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1457,19 +1479,19 @@ class _LandmarkInfoWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome, size: 14, color: AppTheme.primary),
+                const Icon(Icons.auto_awesome, size: 14, color: AppColors.primary),
                 const SizedBox(width: 6),
-                const Text(
-                  'AI 장소 정보',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context).aiInfo,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1481,13 +1503,13 @@ class _LandmarkInfoWidget extends StatelessWidget {
                   ),
                   child: Text(
                     info!.sourceLabel,
-                    style: const TextStyle(fontSize: 9, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const Spacer(),
                 GestureDetector(
                   onTap: onRefresh,
-                  child: const Icon(Icons.refresh, size: 16, color: AppTheme.primary),
+                  child: const Icon(Icons.refresh, size: 16, color: AppColors.primary),
                 ),
               ],
             ),
@@ -1499,20 +1521,20 @@ class _LandmarkInfoWidget extends StatelessWidget {
               children: [
                 _LandmarkRow(
                   icon: Icons.history_edu_outlined,
-                  label: '유래/역사',
+                  label: AppLocalizations.of(context).originHistory,
                   text: info!.origin,
                 ),
                 const SizedBox(height: 10),
                 _LandmarkRow(
                   icon: Icons.place_outlined,
-                  label: '볼거리/특징',
+                  label: AppLocalizations.of(context).highlights,
                   text: info!.highlights,
                 ),
                 if (info!.bestTime != null && info!.bestTime!.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   _LandmarkRow(
                     icon: Icons.calendar_today_outlined,
-                    label: '방문 시기',
+                    label: AppLocalizations.of(context).bestTime,
                     text: info!.bestTime!,
                   ),
                 ],
@@ -1520,7 +1542,7 @@ class _LandmarkInfoWidget extends StatelessWidget {
                   const SizedBox(height: 10),
                   _LandmarkRow(
                     icon: Icons.tips_and_updates_outlined,
-                    label: '방문 팁',
+                    label: AppLocalizations.of(context).visitTip,
                     text: info!.tip!,
                   ),
                 ],
@@ -1545,7 +1567,7 @@ class _LandmarkRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: AppTheme.primary),
+        Icon(icon, size: 15, color: AppColors.primary),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -1556,15 +1578,15 @@ class _LandmarkRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
+              TranslatableText(
                 text,
                 style: const TextStyle(
                   fontSize: 13,
-                  color: AppTheme.textSecondary,
+                  color: AppColors.neutral500,
                   height: 1.5,
                 ),
               ),
@@ -1578,52 +1600,61 @@ class _LandmarkRow extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ThumbnailRoadPainter extends CustomPainter {
+class _NightMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // 지도 스타일과 동일: 도로=흰색, 공원=연두, 강=연파랑
-    final parkPaint = Paint()
-      ..color = const Color(0xFFD4E8C8)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(0, size.height * 0.6, size.width * 0.3, size.height * 0.4), parkPaint);
+    // 다크 블록 (건물 구역)
+    final blockPaint = Paint()..color = const Color(0xFF1E3A24)..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(0, size.height * 0.55, size.width * 0.28, size.height * 0.45), blockPaint);
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.68, 0, size.width * 0.32, size.height * 0.38), blockPaint);
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.15, size.height * 0.08, size.width * 0.22, size.height * 0.3), blockPaint);
 
-    final waterPaint = Paint()
-      ..color = const Color(0xFFC5D8F0)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(size.width * 0.72, 0, size.width * 0.28, size.height * 0.35), waterPaint);
+    // 강 (반투명 파랑)
+    final waterPaint = Paint()..color = const Color(0x442979B3)..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.45, size.height * 0.6, size.width * 0.2, size.height * 0.4), waterPaint);
+
+    // 주요 도로 (빛나는 선)
+    final highway = Paint()
+      ..color = const Color(0xFF4ADE80).withValues(alpha: 0.35)
+      ..strokeWidth = 9
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(0, size.height * 0.40), Offset(size.width, size.height * 0.44), highway);
 
     final road = Paint()
-      ..color = Colors.white.withValues(alpha: 0.85)
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height * 0.45), Offset(size.width, size.height * 0.50), road);
-    canvas.drawLine(Offset(size.width * 0.38, 0), Offset(size.width * 0.43, size.height), road);
+      ..color = Colors.white.withValues(alpha: 0.18)
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(size.width * 0.35, 0), Offset(size.width * 0.40, size.height), road);
+    canvas.drawLine(Offset(0, size.height * 0.70), Offset(size.width * 0.55, size.height * 0.62), road);
+    canvas.drawLine(Offset(size.width * 0.60, size.height), Offset(size.width, size.height * 0.48), road);
 
-    final highway = Paint()
-      ..color = const Color(0xFFFFE0CC).withValues(alpha: 0.9)
-      ..strokeWidth = 10
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height * 0.22), Offset(size.width, size.height * 0.25), highway);
-
+    // 가는 도로
     final thin = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..strokeWidth = 3
+      ..color = Colors.white.withValues(alpha: 0.10)
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width * 0.5, size.height * 0.62), thin);
-    canvas.drawLine(Offset(size.width * 0.6, size.height), Offset(size.width, size.height * 0.5), thin);
+    canvas.drawLine(Offset(0, size.height * 0.20), Offset(size.width * 0.42, size.height * 0.22), thin);
+    canvas.drawLine(Offset(size.width * 0.58, 0), Offset(size.width * 0.62, size.height * 0.38), thin);
+
+    // 빛 산란 (중앙 글로우)
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [const Color(0x2216A34A), Colors.transparent],
+      ).createShader(Rect.fromCircle(
+        center: Offset(size.width * 0.5, size.height * 0.5),
+        radius: size.width * 0.45,
+      ));
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), glowPaint);
   }
 
   @override
-  bool shouldRepaint(_ThumbnailRoadPainter old) => false;
+  bool shouldRepaint(_NightMapPainter old) => false;
 }
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 
-String _timeAgo(DateTime dt) {
-  final diff = DateTime.now().difference(dt);
-  if (diff.inMinutes < 1) return '방금 전';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
-  if (diff.inHours < 24) return '${diff.inHours}시간 전';
-  if (diff.inDays < 7) return '${diff.inDays}일 전';
-  return '${dt.month}/${dt.day}';
+String _timeAgo(DateTime dt, BuildContext context) {
+  return AppLocalizations.of(context).timeAgo(dt);
 }

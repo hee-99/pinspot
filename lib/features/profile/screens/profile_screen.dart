@@ -5,13 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/services/locale_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/models/pin_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pin_service.dart';
 import '../../../core/utils/marker_builder.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../settings/screens/language_test_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -58,16 +62,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _logout() async {
+    final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('정말 로그아웃 하시겠어요?'),
+        title: Text(l.logout, style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(l.logoutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소', style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(l.cancel, style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -76,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               elevation: 0,
             ),
-            child: const Text('로그아웃', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            child: Text(l.logout, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -91,6 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _editProfile() async {
+    final l = AppLocalizations.of(context);
     final nameCtrl = TextEditingController(text: _user?.name ?? '');
     String? newPhotoPath = _user?.localPhotoPath;
 
@@ -118,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   margin: const EdgeInsets.only(top: 12, bottom: 20),
                   decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
                 ),
-                const Text('프로필 편집', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                Text(l.editProfile, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 24),
                 GestureDetector(
                   onTap: () async {
@@ -159,8 +165,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                   controller: nameCtrl,
                   maxLength: 20,
                   decoration: InputDecoration(
-                    labelText: '닉네임',
-                    hintText: '새 닉네임을 입력하세요',
+                    labelText: l.nickname,
+                    hintText: l.nicknameHint,
                     filled: true,
                     fillColor: AppTheme.background,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -189,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text('저장', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                    child: Text(l.save, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -201,7 +207,67 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  void _showLanguagePicker() {
+    final l = AppLocalizations.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.language, color: AppTheme.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Text(l.languageSettings,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...AppLocalizations.languageNames.entries.map((entry) {
+              final code = entry.key;
+              final name = entry.value;
+              final flag = AppLocalizations.languageFlags[code] ?? '';
+              final isCurrent = LocaleService.currentCode == code;
+              return ListTile(
+                leading: Text(flag, style: const TextStyle(fontSize: 24)),
+                title: Text(name,
+                    style: TextStyle(
+                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
+                      color: isCurrent ? AppTheme.primary : AppTheme.textPrimary,
+                    )),
+                trailing: isCurrent
+                    ? const Icon(Icons.check_circle, color: AppTheme.primary, size: 20)
+                    : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  LocaleService.setLocale(code);
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showSettings() {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -225,23 +291,37 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             _SettingsItem(
               icon: Icons.person_outline,
-              label: '프로필 편집',
-              onTap: () => Navigator.pop(context),
+              label: l.editProfile,
+              onTap: () { Navigator.pop(context); _editProfile(); },
+            ),
+            _SettingsItem(
+              icon: Icons.language,
+              label: l.languageSettings,
+              onTap: () { Navigator.pop(context); _showLanguagePicker(); },
+            ),
+            _SettingsItem(
+              icon: Icons.translate,
+              label: '번역 테스트',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LanguageTestScreen()));
+              },
             ),
             _SettingsItem(
               icon: Icons.notifications_outlined,
-              label: '알림 설정',
+              label: l.notificationSettings,
               onTap: () => Navigator.pop(context),
             ),
             _SettingsItem(
               icon: Icons.lock_outline,
-              label: '개인정보 설정',
+              label: l.privacySettings,
               onTap: () => Navigator.pop(context),
             ),
             const Divider(height: 1, indent: 20, endIndent: 20),
             _SettingsItem(
               icon: Icons.logout,
-              label: '로그아웃',
+              label: l.logout,
               color: const Color(0xFFC62828),
               onTap: () { Navigator.pop(context); _logout(); },
             ),
@@ -254,6 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (_loading) {
       return const Scaffold(
         backgroundColor: AppTheme.background,
@@ -266,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         backgroundColor: AppTheme.surface,
         elevation: 0,
         title: Text(
-          _user?.name ?? '프로필',
+          _user?.name ?? l.navProfile,
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         actions: [
@@ -336,130 +417,148 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final providerLabel = switch (user?.provider) {
-      'kakao'  => '카카오',
-      'naver'  => '네이버',
+      'kakao'  => 'Kakao',
+      'naver'  => 'Naver',
       'google' => 'Google',
       'apple'  => 'Apple',
-      'email'  => '이메일',
+      'email'  => l.email,
       _        => null,
     };
 
-    return Container(
-      color: AppTheme.surface,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  _buildAvatar(),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
-                    ),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── 커버 배너 ─────────────────────────────────────────────
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 120,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF091408), Color(0xFF16A34A)],
+                ),
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: Opacity(
+                opacity: 0.08,
+                child: CustomPaint(painter: _DotGridPainter()),
+              ),
+            ),
+            // 아바타 (커버와 겹침)
+            Positioned(
+              bottom: -40,
+              left: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14)],
+                ),
+                child: Stack(
                   children: [
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            user?.name ?? '탐험가',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (providerLabel != null) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              providerLabel,
-                              style: const TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (user?.email != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        user!.email!,
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
+                    _buildAvatar(),
+                    Positioned(
+                      bottom: 2, right: 2,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, size: 13, color: Colors.white),
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _StatItem(label: '핀', value: '$pinCount'),
-                        const SizedBox(width: 20),
-                        const _StatItem(label: '팔로워', value: '0'),
-                        const SizedBox(width: 20),
-                        const _StatItem(label: '팔로잉', value: '0'),
-                      ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
+            ),
+          ],
+        ),
+
+        // ── 유저 정보 ──────────────────────────────────────────────
+        Container(
+          color: AppTheme.surface,
+          padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    final state = context.findAncestorStateOfType<_ProfileScreenState>();
-                    await state?._editProfile();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppTheme.primary),
-                    foregroundColor: AppTheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              Row(children: [
+                Flexible(
+                  child: Text(
+                    user?.name ?? l.explorer,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.6),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Text('프로필 편집'),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFE0E0E0)),
-                    foregroundColor: AppTheme.textPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                if (providerLabel != null) ...[
+                  const SizedBox(width: 7),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(providerLabel,
+                        style: const TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.w700)),
                   ),
-                  child: const Text('공유'),
+                ],
+              ]),
+              if (user?.email != null) ...[
+                const SizedBox(height: 3),
+                Text(user!.email!,
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    overflow: TextOverflow.ellipsis),
+              ],
+              const SizedBox(height: 18),
+
+              // ── 통계 칩 ──────────────────────────────────────────
+              Row(children: [
+                _StatChip(label: l.pins, value: '$pinCount'),
+                const SizedBox(width: 10),
+                _StatChip(label: l.followers, value: '0'),
+                const SizedBox(width: 10),
+                _StatChip(label: l.following, value: '0'),
+              ]),
+
+              const SizedBox(height: 14),
+
+              // ── 버튼 ─────────────────────────────────────────────
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      final state = context.findAncestorStateOfType<_ProfileScreenState>();
+                      await state?._editProfile();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      foregroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(l.editProfile, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {},
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFDEE1D9)),
+                      foregroundColor: AppTheme.textPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(l.share),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 6),
             ],
           ),
-          const SizedBox(height: 4),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -487,22 +586,46 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white;
+    const s = 18.0;
+    for (double x = 0; x < size.width; x += s) {
+      for (double y = 0; y < size.height; y += s) {
+        canvas.drawCircle(Offset(x, y), 1.5, p);
+      }
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+class _StatChip extends StatelessWidget {
   final String label;
   final String value;
-  const _StatItem({required this.label, required this.value});
+  const _StatChip({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.neutral200),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.neutral900, letterSpacing: -0.5)),
+          const SizedBox(height: 1),
+          Text(label, style: const TextStyle(fontSize: 10, color: AppColors.neutral400, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }
+
 
 // ─── 탭바 ──────────────────────────────────────────────────────────────────────
 
@@ -547,7 +670,15 @@ class _ContentTab extends StatefulWidget {
 }
 
 class _ContentTabState extends State<_ContentTab> {
-  String _selectedCategory = '전체';
+  String _selectedCategory = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_selectedCategory.isEmpty) {
+      _selectedCategory = AppLocalizations.of(context).all;
+    }
+  }
 
   List<String> get _categories {
     final cats = widget.pins.map((p) => p.category).toSet().toList();
@@ -556,28 +687,34 @@ class _ContentTabState extends State<_ContentTab> {
   }
 
   List<PinModel> get _filtered {
-    if (_selectedCategory == '전체') return widget.pins;
+    final allKey = AppLocalizations.of(context).all;
+    if (_selectedCategory == allKey) return widget.pins;
     return widget.pins.where((p) => p.category == _selectedCategory).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final allKey = l.all;
+
+    if (_selectedCategory.isEmpty) _selectedCategory = allKey;
+
     if (widget.pins.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.location_off_outlined, size: 48, color: AppTheme.textSecondary),
-            SizedBox(height: 12),
-            Text('아직 등록한 핀이 없어요\n+ 버튼을 눌러 첫 핀을 등록해보세요',
+            const Icon(Icons.location_off_outlined, size: 48, color: AppTheme.textSecondary),
+            const SizedBox(height: 12),
+            Text(l.noPins,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.6)),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.6)),
           ],
         ),
       );
     }
 
-    final allCategories = ['전체', ..._categories];
+    final allCategories = [allKey, ..._categories];
 
     return Column(
       children: [
@@ -590,7 +727,7 @@ class _ContentTabState extends State<_ContentTab> {
             child: Row(
               children: allCategories.map((cat) {
                 final isSelected = cat == _selectedCategory;
-                final count = cat == '전체'
+                final count = cat == allKey
                     ? widget.pins.length
                     : widget.pins.where((p) => p.category == cat).length;
                 return Padding(
@@ -627,7 +764,7 @@ class _ContentTabState extends State<_ContentTab> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '${_filtered.length}개',
+              '${_filtered.length}',
               style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
           ),
@@ -712,17 +849,27 @@ class _MyMapTab extends StatefulWidget {
 
 class _MyMapTabState extends State<_MyMapTab> {
   final _controller = Completer<GoogleMapController>();
-  String _selectedCategory = '전체';
+  String _selectedCategory = '';
   Map<String, BitmapDescriptor> _markerIcons = {};
 
   List<String> get _categories {
     final cats = widget.pins.map((p) => p.category).toSet().toList()..sort();
-    return ['전체', ...cats];
+    final allKey = AppLocalizations.of(context).all;
+    return [allKey, ...cats];
   }
 
   List<PinModel> get _filtered {
-    if (_selectedCategory == '전체') return widget.pins;
+    final allKey = AppLocalizations.of(context).all;
+    if (_selectedCategory.isEmpty || _selectedCategory == allKey) return widget.pins;
     return widget.pins.where((p) => p.category == _selectedCategory).toList();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_selectedCategory.isEmpty) {
+      _selectedCategory = AppLocalizations.of(context).all;
+    }
   }
 
   @override
@@ -775,7 +922,7 @@ class _MyMapTabState extends State<_MyMapTab> {
     markerId: MarkerId(pin.id),
     position: LatLng(pin.lat, pin.lng),
     infoWindow: InfoWindow(title: pin.title, snippet: pin.category),
-    icon: _markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(14.0),
+    icon: _markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
   )).toSet();
 
   LatLng get _defaultCenter {
@@ -794,17 +941,16 @@ class _MyMapTabState extends State<_MyMapTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final allKey = l.all;
+    if (_selectedCategory.isEmpty) _selectedCategory = allKey;
+
     final filtered = _filtered;
-    // 카테고리 칩 bar 높이 (padding 10*2 + 칩 27 = 47)
     const filterBarHeight = 47.0;
-    // 하단 장소 패널 높이 (레이블 14+14+8 + ListView 80 = 116)
     const placeChipsHeight = 116.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Stack 전략: GoogleMap이 전체 공간을 차지하고,
-        // 필터 바·배지·장소 칩은 Positioned로 위에 올림.
-        // Expanded inside scroll view를 쓰지 않아 NestedScrollView에서도 안전.
         final totalHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : MediaQuery.of(context).size.height - 160;
@@ -813,7 +959,6 @@ class _MyMapTabState extends State<_MyMapTab> {
           height: totalHeight,
           child: Stack(
             children: [
-              // ── 지도 (전체 공간) ──────────────────────────────────────
               Positioned.fill(
                 child: GoogleMap(
                   initialCameraPosition: CameraPosition(target: _defaultCenter, zoom: 11.5),
@@ -828,12 +973,9 @@ class _MyMapTabState extends State<_MyMapTab> {
                 ),
               ),
 
-              // ── 카테고리 필터 칩 (상단 고정) ────────────────────────
+              // 카테고리 필터 칩
               Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: filterBarHeight,
+                top: 0, left: 0, right: 0, height: filterBarHeight,
                 child: Container(
                   color: AppTheme.surface,
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -843,7 +985,7 @@ class _MyMapTabState extends State<_MyMapTab> {
                     child: Row(
                       children: _categories.map((cat) {
                         final isSelected = cat == _selectedCategory;
-                        final count = cat == '전체'
+                        final count = cat == allKey
                             ? widget.pins.length
                             : widget.pins.where((p) => p.category == cat).length;
                         return Padding(
@@ -877,7 +1019,6 @@ class _MyMapTabState extends State<_MyMapTab> {
                 ),
               ),
 
-              // ── 핀 없을 때 안내 오버레이 ─────────────────────────────
               if (widget.pins.isEmpty)
                 Center(
                   child: Container(
@@ -886,26 +1027,22 @@ class _MyMapTabState extends State<_MyMapTab> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12),
-                      ],
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12)],
                     ),
-                    child: const Column(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.add_location_alt_outlined, size: 36, color: AppTheme.primary),
-                        SizedBox(height: 8),
-                        Text('핀을 등록하면 지도에 표시돼요',
-                            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                        const Icon(Icons.add_location_alt_outlined, size: 36, color: AppTheme.primary),
+                        const SizedBox(height: 8),
+                        Text(l.addPinToMap,
+                            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                       ],
                     ),
                   ),
                 ),
 
-              // ── 우상단 배지 ───────────────────────────────────────────
               Positioned(
-                top: filterBarHeight + 12,
-                right: 12,
+                top: filterBarHeight + 12, right: 12,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -914,9 +1051,7 @@ class _MyMapTabState extends State<_MyMapTab> {
                       decoration: BoxDecoration(
                         color: AppTheme.surface,
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2)),
-                        ],
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -924,9 +1059,9 @@ class _MyMapTabState extends State<_MyMapTab> {
                           const Icon(Icons.location_on, size: 14, color: AppTheme.primary),
                           const SizedBox(width: 4),
                           Text(
-                            _selectedCategory == '전체'
-                                ? '내 핀 ${widget.pins.length}개'
-                                : '$_selectedCategory ${filtered.length}개',
+                            _selectedCategory == allKey
+                                ? l.myPinsCount(widget.pins.length)
+                                : '$_selectedCategory ${filtered.length}',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -941,16 +1076,14 @@ class _MyMapTabState extends State<_MyMapTab> {
                           decoration: BoxDecoration(
                             color: AppTheme.surface,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2)),
-                            ],
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2))],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.fit_screen_outlined, size: 14, color: AppTheme.textSecondary),
-                              SizedBox(width: 4),
-                              Text('전체보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                              const Icon(Icons.fit_screen_outlined, size: 14, color: AppTheme.textSecondary),
+                              const SizedBox(width: 4),
+                              Text(l.viewAll, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
                             ],
                           ),
                         ),
@@ -960,13 +1093,9 @@ class _MyMapTabState extends State<_MyMapTab> {
                 ),
               ),
 
-              // ── 하단 장소 칩 (핀 있을 때만) ──────────────────────────
               if (filtered.isNotEmpty)
                 Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: placeChipsHeight,
+                  bottom: 0, left: 0, right: 0, height: placeChipsHeight,
                   child: Container(
                     color: AppTheme.surface,
                     child: Column(
@@ -975,7 +1104,9 @@ class _MyMapTabState extends State<_MyMapTab> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                           child: Text(
-                            _selectedCategory == '전체' ? '방문한 장소' : '$_selectedCategory 장소',
+                            _selectedCategory == allKey
+                                ? l.visitedPlaces
+                                : l.categoryPlaces(_selectedCategory),
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -1051,10 +1182,11 @@ class _SavedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (pins.isEmpty) {
-      return const Center(
-        child: Text('저장된 핀이 없어요',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+      return Center(
+        child: Text(l.noSavedPins,
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
       );
     }
     return GridView.builder(
@@ -1076,8 +1208,7 @@ class _SavedTab extends StatelessWidget {
                 : Container(color: Colors.grey[200]),
             const Center(child: Icon(Icons.bookmark, size: 28, color: AppTheme.primary)),
             Positioned(
-              bottom: 6,
-              left: 6,
+              bottom: 6, left: 6,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
 import '../../home/screens/home_screen.dart';
@@ -48,7 +49,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen>
     final email = _loginEmailCtrl.text.trim();
     final pass = _loginPassCtrl.text;
     if (email.isEmpty || pass.isEmpty) {
-      setState(() => _error = '이메일과 비밀번호를 입력해주세요');
+      setState(() => _error = AppLocalizations.of(context).emailRequired);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -56,7 +57,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen>
       final user = await AuthService.signInWithEmail(email, pass);
       if (!mounted) return;
       if (user == null) {
-        setState(() => _error = '이메일 또는 비밀번호가 올바르지 않아요');
+        setState(() => _error = AppLocalizations.of(context).wrongCredentials);
         return;
       }
       Navigator.of(context).pushAndRemoveUntil(
@@ -128,7 +129,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen>
           indicatorColor: AppTheme.primary,
           indicatorWeight: 2,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          tabs: const [Tab(text: '로그인'), Tab(text: '회원가입')],
+          tabs: [
+              Tab(text: AppLocalizations.of(context).emailLogin),
+              Tab(text: AppLocalizations.of(context).emailRegister),
+            ],
         ),
       ),
       body: TabBarView(
@@ -218,7 +222,7 @@ class _LoginTab extends StatelessWidget {
               child: loading
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                  : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                  : Text(AppLocalizations.of(context).emailLogin, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
         ],

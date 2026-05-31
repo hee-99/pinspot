@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../home/screens/home_screen.dart';
 import 'email_auth_screen.dart';
@@ -11,8 +12,31 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   String? _loadingProvider;
+
+  late final AnimationController _cardCtrl;
+  late final Animation<Offset> _cardSlide;
+  late final Animation<double> _cardFade;
+
+  static const _kDark = AppColors.darkBg;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.10), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOutCubic));
+    _cardFade = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _cardCtrl.forward());
+  }
+
+  @override
+  void dispose() {
+    _cardCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _login(String provider) async {
     setState(() => _loadingProvider = provider);
@@ -24,17 +48,13 @@ class _LoginScreenState extends State<LoginScreen> {
         'apple'  => await AuthService.signInWithApple(),
         _        => null,
       };
-
       if (!mounted) return;
-
       if (user != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
       } else if (provider == 'apple') {
-        _snack('Apple 로그인은 iOS에서만 지원합니다');
+        _snack(AppLocalizations.of(context).startWithApple);
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       _showLoginError(provider);
     } finally {
@@ -43,18 +63,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showLoginError(String provider) {
-    final providerName = switch (provider) {
-      'kakao' => '카카오',
-      'naver' => '네이버',
+    final l = AppLocalizations.of(context);
+    final name = switch (provider) {
+      'kakao'  => 'Kakao',
+      'naver'  => 'Naver',
       'google' => 'Google',
-      'apple' => 'Apple',
-      _ => '소셜',
+      'apple'  => 'Apple',
+      _        => provider,
     };
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
         actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -62,38 +83,25 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               width: 56, height: 56,
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
+                color: AppColors.warning.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.settings_outlined, color: Colors.orange, size: 28),
+              child: Icon(Icons.settings_outlined, color: AppColors.warning, size: 28),
             ),
             const SizedBox(height: 16),
-            Text(
-              '$providerName 연동 준비 중',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              textAlign: TextAlign.center,
-            ),
+            Text(l.providerSetupTitle(name),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.neutral900),
+                textAlign: TextAlign.center),
             const SizedBox(height: 10),
-            Text(
-              'API 키 설정이 필요합니다.\n지금은 테스트 로그인을 이용해주세요.',
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.6),
-              textAlign: TextAlign.center,
-            ),
+            Text(l.providerSetupDesc,
+                style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.6),
+                textAlign: TextAlign.center),
           ],
         ),
         actions: [
           SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: const Text('확인', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-            ),
+            width: double.infinity, height: 48,
+            child: ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(l.confirm)),
           ),
         ],
       ),
@@ -104,217 +112,344 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loadingProvider = 'guest');
     await AuthService.signInAsGuest();
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
   }
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  bool get _busy => _loadingProvider != null;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 52),
-                // 로고
-                const Text(
-                  'PINSPOT',
-                  style: TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.primary,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  '찍는 순간, 지도가 된다',
-                  style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
-                ),
-                const SizedBox(height: 48),
+    final l = AppLocalizations.of(context);
+    final mq = MediaQuery.of(context);
+    final heroH = mq.size.height * 0.37;
 
-                // ── 테스트 로그인 (메인 CTA) ────────────────────────────────
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primary.withValues(alpha: 0.08),
-                        AppTheme.primary.withValues(alpha: 0.03),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
+    return Scaffold(
+      backgroundColor: _kDark,
+      body: Column(
+        children: [
+          // ── 히어로 영역 ─────────────────────────────────────────────────
+          SizedBox(
+            height: heroH,
+            child: _HeroSection(topPad: mq.padding.top),
+          ),
+
+          // ── 로그인 카드 (슬라이드업) ────────────────────────────────────
+          Expanded(
+            child: SlideTransition(
+              position: _cardSlide,
+              child: FadeTransition(
+                opacity: _cardFade,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  child: SafeArea(
+                    top: false,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'BETA TEST',
-                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.5),
-                            ),
+                          // 게스트 체험 버튼
+                          _BetaCard(
+                            loading: _loadingProvider == 'guest',
+                            onTap: _busy ? null : _loginAsGuest,
+                            l: l,
                           ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            '바로 체험하기',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+
+                          const SizedBox(height: 22),
+                          _DividerRow(label: l.startWithSocial),
+                          const SizedBox(height: 16),
+
+                          // 카카오
+                          _SocialBtn(
+                            label: l.startWithKakao,
+                            bg: const Color(0xFFFEE500),
+                            fg: const Color(0xFF3C1E1E),
+                            icon: const Text('K', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF3C1E1E))),
+                            loading: _loadingProvider == 'kakao',
+                            onTap: _busy ? null : () => _login('kakao'),
                           ),
+                          const SizedBox(height: 10),
+
+                          // 네이버
+                          _SocialBtn(
+                            label: l.startWithNaver,
+                            bg: const Color(0xFF03C75A),
+                            fg: Colors.white,
+                            icon: const Text('N', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                            loading: _loadingProvider == 'naver',
+                            onTap: _busy ? null : () => _login('naver'),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // 구글
+                          _SocialBtn(
+                            label: l.startWithGoogle,
+                            bg: AppColors.surface,
+                            fg: const Color(0xFF1F1F1F),
+                            icon: const Text('G', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF4285F4))),
+                            loading: _loadingProvider == 'google',
+                            onTap: _busy ? null : () => _login('google'),
+                            border: const BorderSide(color: AppColors.neutral200),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // 애플
+                          _SocialBtn(
+                            label: l.startWithApple,
+                            bg: AppColors.neutral900,
+                            fg: Colors.white,
+                            icon: const Icon(Icons.apple, color: Colors.white, size: 22),
+                            loading: _loadingProvider == 'apple',
+                            onTap: _busy ? null : () => _login('apple'),
+                          ),
+
+                          const SizedBox(height: 16),
+                          _DividerRow(label: l.or),
+                          const SizedBox(height: 16),
+
+                          // 이메일
+                          _SocialBtn(
+                            label: l.startWithEmail,
+                            bg: AppColors.neutral100,
+                            fg: AppColors.neutral900,
+                            icon: const Icon(Icons.mail_outline_rounded, color: AppColors.neutral600, size: 20),
+                            loading: false,
+                            onTap: _busy
+                                ? null
+                                : () => Navigator.push(context,
+                                    MaterialPageRoute(builder: (_) => const EmailAuthScreen())),
+                          ),
+
+                          const SizedBox(height: 20),
+                          Text(
+                            l.loginTerms,
+                            style: const TextStyle(fontSize: 11, color: AppColors.neutral400),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '앱 키 설정 없이 모든 기능을 체험해보세요',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.85)),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _loadingProvider != null ? null : _loginAsGuest,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            disabledBackgroundColor: AppTheme.primary.withValues(alpha: 0.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                            elevation: 0,
-                          ),
-                          child: _loadingProvider == 'guest'
-                              ? const SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                                )
-                              : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.rocket_launch_outlined, size: 18, color: Colors.white),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      '테스트로 시작하기',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                const SizedBox(height: 28),
-                // 구분선
-                Row(
+// ── 히어로 섹션 ────────────────────────────────────────────────────────────────
+class _HeroSection extends StatelessWidget {
+  final double topPad;
+  const _HeroSection({required this.topPad});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CustomPaint(painter: _HeroBgPainter()),
+        Padding(
+          padding: EdgeInsets.only(top: topPad + 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 핀 아이콘
+              Container(
+                width: 74, height: 74,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.55), blurRadius: 32, offset: const Offset(0, 8)),
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 64, offset: const Offset(0, 20)),
+                  ],
+                ),
+                child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 44),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'PINSPOT',
+                style: TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.w900,
+                  color: Colors.white, letterSpacing: 5,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '찍는 순간, 기록이 된다',
+                style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.55), letterSpacing: 0.3),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroBgPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 다크 포레스트 그라디언트
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.darkBg, AppColors.darkBgMid],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+    );
+
+    // 중앙 방사형 그린 글로우
+    final center = Offset(size.width / 2, size.height * 0.50);
+    canvas.drawCircle(
+      center,
+      size.width * 0.52,
+      Paint()
+        ..shader = RadialGradient(colors: [
+          AppColors.primary.withValues(alpha: 0.13),
+          Colors.transparent,
+        ]).createShader(Rect.fromCircle(center: center, radius: size.width * 0.52)),
+    );
+
+    // 흩어진 핀 도트
+    final dotPaint = Paint();
+    for (final d in [
+      [0.08, 0.14, 2.5, 0.20],
+      [0.91, 0.09, 2.0, 0.16],
+      [0.83, 0.72, 2.5, 0.14],
+      [0.14, 0.82, 2.0, 0.13],
+      [0.95, 0.56, 1.5, 0.12],
+      [0.45, 0.05, 2.5, 0.18],
+      [0.03, 0.47, 1.5, 0.13],
+      [0.66, 0.89, 2.0, 0.11],
+      [0.59, 0.19, 1.5, 0.14],
+      [0.29, 0.63, 2.0, 0.10],
+    ]) {
+      dotPaint.color = AppColors.primary.withValues(alpha: d[3]);
+      canvas.drawCircle(Offset(size.width * d[0], size.height * d[1]), d[2], dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter o) => false;
+}
+
+// ── BETA 체험 카드 ──────────────────────────────────────────────────────────────
+class _BetaCard extends StatelessWidget {
+  final bool loading;
+  final VoidCallback? onTap;
+  final AppLocalizations l;
+  const _BetaCard({required this.loading, required this.onTap, required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: Divider(color: const Color(0xFFE8E8E8))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text(
-                        '소셜 계정으로 시작',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(5),
                       ),
+                      child: Text(l.betaTest,
+                          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                     ),
-                    Expanded(child: Divider(color: const Color(0xFFE8E8E8))),
+                    const SizedBox(height: 5),
+                    Text(l.tryNow,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text(l.tryNowDesc,
+                        style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.72))),
                   ],
                 ),
-                const SizedBox(height: 20),
+              ),
+              const SizedBox(width: 16),
+              loading
+                  ? const SizedBox(width: 22, height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                // ── 소셜 로그인 버튼들 ─────────────────────────────────────
-                _LoginButton(
-                  label: '카카오로 시작하기',
-                  backgroundColor: const Color(0xFFFEE500),
-                  textColor: const Color(0xFF3C1E1E),
-                  icon: const Text('K', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF3C1E1E))),
-                  loading: _loadingProvider == 'kakao',
-                  onTap: () => _login('kakao'),
-                ),
-                const SizedBox(height: 10),
-                _LoginButton(
-                  label: '네이버로 시작하기',
-                  backgroundColor: const Color(0xFF03C75A),
-                  textColor: Colors.white,
-                  icon: const Text('N', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
-                  loading: _loadingProvider == 'naver',
-                  onTap: () => _login('naver'),
-                ),
-                const SizedBox(height: 10),
-                _LoginButton(
-                  label: 'Google로 시작하기',
-                  backgroundColor: Colors.white,
-                  textColor: const Color(0xFF1F1F1F),
-                  icon: const Text('G', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF4285F4))),
-                  loading: _loadingProvider == 'google',
-                  onTap: () => _login('google'),
-                  border: const BorderSide(color: Color(0xFFDDDDDD)),
-                ),
-                const SizedBox(height: 10),
-                _LoginButton(
-                  label: 'Apple로 시작하기',
-                  backgroundColor: Colors.black,
-                  textColor: Colors.white,
-                  icon: const Icon(Icons.apple, color: Colors.white, size: 22),
-                  loading: _loadingProvider == 'apple',
-                  onTap: () => _login('apple'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(child: Divider(color: Color(0xFFE8E8E8))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text('또는',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6))),
-                    ),
-                    const Expanded(child: Divider(color: Color(0xFFE8E8E8))),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _LoginButton(
-                  label: '이메일로 시작하기',
-                  backgroundColor: AppTheme.background,
-                  textColor: AppTheme.textPrimary,
-                  icon: const Icon(Icons.email_outlined, color: AppTheme.textPrimary, size: 20),
-                  loading: false,
-                  onTap: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const EmailAuthScreen())),
-                  border: const BorderSide(color: Color(0xFFDDDDDD)),
-                ),
-                const SizedBox(height: 32),
-                Center(
-                  child: Text(
-                    '로그인 시 서비스 이용약관 및 개인정보 처리방침에 동의합니다',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 24),
+// ── 소셜 로그인 버튼 ────────────────────────────────────────────────────────────
+class _SocialBtn extends StatelessWidget {
+  final String label;
+  final Color bg, fg;
+  final Widget icon;
+  final bool loading;
+  final VoidCallback? onTap;
+  final BorderSide? border;
+
+  const _SocialBtn({
+    required this.label, required this.bg, required this.fg,
+    required this.icon, required this.loading, required this.onTap,
+    this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: border ?? BorderSide.none,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                SizedBox(width: 24, child: Center(child: icon)),
+                const Spacer(),
+                loading
+                    ? SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: fg.withValues(alpha: 0.6)))
+                    : Text(label,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: fg)),
+                const Spacer(),
+                const SizedBox(width: 24),
               ],
             ),
           ),
@@ -324,71 +459,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _LoginButton extends StatelessWidget {
+// ── 구분선 ─────────────────────────────────────────────────────────────────────
+class _DividerRow extends StatelessWidget {
   final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final Widget icon;
-  final bool loading;
-  final VoidCallback onTap;
-  final BorderSide? border;
-
-  const _LoginButton({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.icon,
-    required this.loading,
-    required this.onTap,
-    this.border,
-  });
+  const _DividerRow({required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: Material(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(13),
-        shape: border != null
-            ? RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-                side: border!,
-              )
-            : null,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(13),
-          onTap: loading ? null : onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                SizedBox(width: 26, height: 26, child: Center(child: icon)),
-                const Spacer(),
-                loading
-                    ? SizedBox(
-                        width: 18, height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: textColor.withValues(alpha: 0.7),
-                        ),
-                      )
-                    : Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
-                        ),
-                      ),
-                const Spacer(),
-                const SizedBox(width: 26),
-              ],
-            ),
-          ),
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.neutral200)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
         ),
-      ),
+        const Expanded(child: Divider(color: AppColors.neutral200)),
+      ],
     );
   }
 }

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/models/pin_model.dart';
 import '../../../core/services/directions_service.dart';
 import '../../../core/services/category_service.dart';
@@ -18,6 +18,14 @@ class _Pin {
   final String name;
   final String category;
   const _Pin(this.pos, this.name, this.category);
+}
+
+class _DangerZone {
+  final LatLng pos;
+  final String name;
+  final String reason;
+  final String icon;
+  const _DangerZone(this.pos, this.name, this.reason, this.icon);
 }
 
 class MapScreen extends StatefulWidget {
@@ -55,6 +63,16 @@ class _MapScreenState extends State<MapScreen> {
     _Pin(const LatLng(37.5798, 127.0018), '낙산공원 야경', '사진 명소'),
   ];
 
+  static const _dangerZones = [
+    _DangerZone(LatLng(37.0742, 127.0844), '살목지 계곡', '급류·익수 위험 구간. 우기 시 접근 금지.', '🌊'),
+    _DangerZone(LatLng(37.7455, 128.8677), '한탄강 급류 구간', '수심 급변·암초 다수. 사망 사고 발생지.', '⚡'),
+    _DangerZone(LatLng(37.6568, 126.9980), '북한산 인수봉', '낙석·추락 위험. 우천 시 출입 통제.', '🪨'),
+    _DangerZone(LatLng(38.1197, 128.4661), '설악산 공룡능선', '강풍·낙석 위험. 비인가 루트 접근 금지.', '⛰️'),
+    _DangerZone(LatLng(35.3349, 127.7305), '지리산 천왕봉 북능', '겨울 결빙·폭풍 위험 구간.', '🧊'),
+    _DangerZone(LatLng(36.5685, 128.7289), '주왕산 급경사 폭포', '미끄럼·낙하 위험. 우기 접근 금지.', '💧'),
+    _DangerZone(LatLng(35.1796, 129.0756), '부산 해운대 이안류', '이안류 발생 구간. 해수욕 금지 구역.', '🌊'),
+  ];
+
   Set<Marker> get _markers {
     var staticList = _selectedCategory == '전체'
         ? _pins
@@ -74,16 +92,30 @@ class _MapScreenState extends State<MapScreen> {
     final staticMarkers = staticList.map((pin) => Marker(
       markerId: MarkerId('static_${pin.name}'),
       position: pin.pos,
-      icon: BitmapDescriptor.defaultMarkerWithHue(14.0),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       onTap: () => _showPinSheet(pin),
     )).toSet();
-    final savedMarkers = savedList.map((pin) => Marker(
-      markerId: MarkerId('saved_${pin.id}'),
-      position: LatLng(pin.lat, pin.lng),
-      icon: _markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(14.0),
-      onTap: () => _showSavedPinSheet(pin),
+    final savedMarkers = savedList.map((pin) {
+      final isDanger = pin.category.contains('위험');
+      return Marker(
+        markerId: MarkerId('saved_${pin.id}'),
+        position: LatLng(pin.lat, pin.lng),
+        icon: isDanger
+            ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)
+            : (_markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)),
+        onTap: () => _showSavedPinSheet(pin),
+      );
+    }).toSet();
+
+    // 위험 지역 마커 (카테고리 필터 무시, 항상 표시)
+    final dangerMarkers = _dangerZones.map((dz) => Marker(
+      markerId: MarkerId('danger_${dz.name}'),
+      position: dz.pos,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      onTap: () => _showDangerSheet(dz),
     )).toSet();
-    return {...staticMarkers, ...savedMarkers};
+
+    return {...staticMarkers, ...savedMarkers, ...dangerMarkers};
   }
 
   @override
@@ -206,6 +238,15 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _showDangerSheet(_DangerZone dz) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _DangerBottomSheet(dangerZone: dz),
+    );
+  }
+
   void _showSavedPinSheet(PinModel pin) {
     showModalBottomSheet(
       context: context,
@@ -265,7 +306,7 @@ class _MapScreenState extends State<MapScreen> {
         Polyline(
           polylineId: const PolylineId('route'),
           points: result.polylinePoints,
-          color: AppTheme.primary,
+          color: AppColors.primary,
           width: 5,
         ),
       };
@@ -301,7 +342,7 @@ class _MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(msg),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.textPrimary,
+        backgroundColor: AppColors.neutral900,
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -343,28 +384,38 @@ class _MapScreenState extends State<MapScreen> {
             top: 0, left: 0, right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SearchBar(
-                  controller: _searchCtrl,
-                  hintText: '장소, 카테고리 검색',
-                  leading: const Icon(Icons.search, color: AppTheme.textSecondary),
-                  trailing: _searchQuery.isNotEmpty
-                      ? [
-                          GestureDetector(
-                            onTap: () {
-                              _searchCtrl.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                            child: const Icon(Icons.close, color: AppTheme.textSecondary, size: 18),
-                          ),
-                        ]
-                      : null,
-                  backgroundColor: WidgetStateProperty.all(AppTheme.surface),
-                  elevation: WidgetStateProperty.all(3),
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4)),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                    ],
                   ),
-                  onChanged: (v) => setState(() => _searchQuery = v),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    style: const TextStyle(fontSize: 15, color: AppColors.neutral900),
+                    decoration: InputDecoration(
+                      hintText: '장소, 카테고리 검색',
+                      hintStyle: const TextStyle(color: AppColors.neutral400, fontSize: 15),
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.neutral400, size: 20),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
+                              child: const Icon(Icons.close_rounded, color: AppColors.neutral400, size: 18),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+                      filled: false,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -372,9 +423,10 @@ class _MapScreenState extends State<MapScreen> {
           // 카테고리 칩 (길찾기 중에는 숨김)
           if (!_isNavigating && !_navLoading)
             Positioned(
-              bottom: 90, left: 16, right: 16,
+              bottom: 90, left: 0, right: 0,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: ['전체', ..._categories].map((label) {
                     final sel = _selectedCategory == label;
@@ -383,15 +435,17 @@ class _MapScreenState extends State<MapScreen> {
                       child: GestureDetector(
                         onTap: () => setState(() => _selectedCategory = label),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                           decoration: BoxDecoration(
-                            color: sel ? AppTheme.primary : AppTheme.surface,
-                            borderRadius: BorderRadius.circular(20),
+                            color: sel ? AppColors.primary : AppColors.surface,
+                            borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 4,
+                                color: sel
+                                    ? AppColors.primary.withValues(alpha: 0.30)
+                                    : Colors.black.withValues(alpha: 0.10),
+                                blurRadius: sel ? 8 : 4,
                                 offset: const Offset(0, 2),
                               ),
                             ],
@@ -400,8 +454,8 @@ class _MapScreenState extends State<MapScreen> {
                             label,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-                              color: sel ? Colors.white : AppTheme.textPrimary,
+                              fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
+                              color: sel ? Colors.white : AppColors.neutral600,
                             ),
                           ),
                         ),
@@ -416,21 +470,21 @@ class _MapScreenState extends State<MapScreen> {
             Positioned(
               bottom: 90, left: 16, right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
                       width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                     ),
-                    SizedBox(width: 12),
-                    Text('경로를 탐색하는 중...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    const Text('경로를 탐색하는 중...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.neutral900)),
                   ],
                 ),
               ),
@@ -453,52 +507,46 @@ class _MapScreenState extends State<MapScreen> {
             child: GestureDetector(
               onTap: _moveToMyLocation,
               child: Container(
-                width: 44, height: 44,
+                width: 46, height: 46,
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3)),
                   ],
                 ),
                 child: _locationLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                       )
-                    : const Icon(Icons.my_location, color: AppTheme.primary, size: 22),
+                    : const Icon(Icons.my_location_rounded, color: AppColors.primary, size: 22),
               ),
             ),
           ),
           // 위치 에러 배너 (탭하면 재시도)
           if (_locationError != null && !_locationLoading)
             Positioned(
-              top: 100, left: 16, right: 16,
+              top: 80, left: 16, right: 16,
               child: GestureDetector(
                 onTap: _fetchLocation,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
+                    color: AppColors.neutral900.withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_off, color: Colors.white, size: 15),
+                      const Icon(Icons.location_off_rounded, color: Colors.white, size: 15),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text(
-                          _locationError!,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
+                        child: Text(_locationError!,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
                       ),
                       const SizedBox(width: 8),
-                      const Text('탭하여 재시도', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                      Text('재시도', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -547,10 +595,10 @@ class _PinBottomSheet extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -4)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
           ],
         ),
         child: Column(
@@ -558,23 +606,23 @@ class _PinBottomSheet extends StatelessWidget {
           children: [
             Container(
               width: 36, height: 4,
-              margin: const EdgeInsets.only(top: 10, bottom: 16),
-              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+              margin: const EdgeInsets.only(top: 12, bottom: 18),
+              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        width: 44, height: 44,
+                        width: 46, height: 46,
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 24),
+                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -582,27 +630,24 @@ class _PinBottomSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(pin.name,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
+                            const SizedBox(height: 5),
                             Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primaryLight,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(pin.category,
-                                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
                                 ),
                                 if (dist != null) ...[
                                   const SizedBox(width: 8),
-                                  Icon(Icons.near_me_rounded, size: 12,
-                                      color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+                                  const Icon(Icons.near_me_rounded, size: 12, color: AppColors.neutral400),
                                   const SizedBox(width: 3),
-                                  Text(dist,
-                                      style: TextStyle(fontSize: 12,
-                                          color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                                  Text(dist, style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
                                 ],
                               ],
                             ),
@@ -619,9 +664,9 @@ class _PinBottomSheet extends StatelessWidget {
                           onPressed: onNavigate,
                           icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
                           label: const Text('길찾기',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                             elevation: 0,
@@ -632,12 +677,12 @@ class _PinBottomSheet extends StatelessWidget {
                       Container(
                         width: 50, height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
+                          color: AppColors.neutral100,
                           borderRadius: BorderRadius.circular(13),
                         ),
                         child: IconButton(
                           onPressed: onShare,
-                          icon: const Icon(Icons.ios_share_outlined, color: AppTheme.textPrimary, size: 20),
+                          icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
                           tooltip: '공유',
                         ),
                       ),
@@ -673,40 +718,36 @@ class _NavigationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: AppColors.primary.withValues(alpha: 0.14), blurRadius: 20, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 상단 컬러 바
           Container(
-            height: 4,
+            height: 3,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.primary, Color(0xFFFF8A65)],
+                colors: [AppColors.primary, AppColors.primaryMuted],
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: Row(
               children: [
                 Container(
-                  width: 42, height: 42,
+                  width: 44, height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.directions_walk, color: AppTheme.primary, size: 22),
+                  child: const Icon(Icons.directions_walk_rounded, color: AppColors.primary, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -716,14 +757,14 @@ class _NavigationPanel extends StatelessWidget {
                     children: [
                       Text(
                         destination,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.neutral900),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 5),
                       Row(
                         children: [
-                          _NavStat(Icons.straighten_rounded, distance, AppTheme.primary),
+                          _NavStat(Icons.straighten_rounded, distance, AppColors.primary),
                           const SizedBox(width: 12),
                           _NavStat(Icons.access_time_rounded, duration, const Color(0xFF5C6BC0)),
                         ],
@@ -737,10 +778,10 @@ class _NavigationPanel extends StatelessWidget {
                   child: Container(
                     width: 34, height: 34,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      color: AppColors.neutral100,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close_rounded, color: AppTheme.textSecondary, size: 18),
+                    child: const Icon(Icons.close_rounded, color: AppColors.neutral500, size: 18),
                   ),
                 ),
               ],
@@ -810,10 +851,10 @@ class _SavedPinBottomSheet extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -4)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -832,13 +873,11 @@ class _SavedPinBottomSheet extends StatelessWidget {
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
-            Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.only(top: 10, bottom: 14, left: 0),
-              alignment: Alignment.center,
+            Center(
               child: Container(
                 width: 36, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+                margin: const EdgeInsets.only(top: 12, bottom: 14),
+                decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             Padding(
@@ -849,12 +888,12 @@ class _SavedPinBottomSheet extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 44, height: 44,
+                        width: 46, height: 46,
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 24),
+                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -862,27 +901,24 @@ class _SavedPinBottomSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(pin.title,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
+                            const SizedBox(height: 5),
                             Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primaryLight,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(pin.category,
-                                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
                                 ),
                                 if (dist != null) ...[
                                   const SizedBox(width: 8),
-                                  Icon(Icons.near_me_rounded, size: 12,
-                                      color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+                                  const Icon(Icons.near_me_rounded, size: 12, color: AppColors.neutral400),
                                   const SizedBox(width: 3),
-                                  Text(dist,
-                                      style: TextStyle(fontSize: 12,
-                                          color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+                                  Text(dist, style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
                                 ],
                               ],
                             ),
@@ -894,7 +930,7 @@ class _SavedPinBottomSheet extends StatelessWidget {
                   if (pin.description.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(pin.description,
-                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                        style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.55),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -906,9 +942,9 @@ class _SavedPinBottomSheet extends StatelessWidget {
                           onPressed: onNavigate,
                           icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
                           label: const Text('길찾기',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                             elevation: 0,
@@ -919,16 +955,112 @@ class _SavedPinBottomSheet extends StatelessWidget {
                       Container(
                         width: 50, height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
+                          color: AppColors.neutral100,
                           borderRadius: BorderRadius.circular(13),
                         ),
                         child: IconButton(
                           onPressed: onShare,
-                          icon: const Icon(Icons.ios_share_outlined, color: AppTheme.textPrimary, size: 20),
+                          icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
                           tooltip: '공유',
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 위험 지역 바텀시트
+// ──────────────────────────────────────────────
+class _DangerBottomSheet extends StatelessWidget {
+  final _DangerZone dangerZone;
+  const _DangerBottomSheet({required this.dangerZone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 16, right: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, -4))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 18),
+              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Container(
+                      width: 50, height: 50,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(14)),
+                      child: Center(child: Text(dangerZone.icon, style: const TextStyle(fontSize: 26))),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDC2626), borderRadius: BorderRadius.circular(6)),
+                          child: const Text('⚠️ 위험 지역',
+                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w800)),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(dangerZone.name,
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                      ]),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3F3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFCDD2)),
+                    ),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(dangerZone.reason,
+                            style: const TextStyle(fontSize: 13, color: Color(0xFFB71C1C), height: 1.55)),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity, height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('확인했습니다', style: TextStyle(fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFDC2626)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
                   ),
                 ],
               ),

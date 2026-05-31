@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/landmark_info_model.dart';
 import '../../../core/models/pin_model.dart';
@@ -23,7 +24,7 @@ class CreatePinScreen extends StatefulWidget {
 class _CreatePinScreenState extends State<CreatePinScreen> {
   static const double _maxDistance = 500.0;
 
-  int _step = 0; // 0: source, 1: verify, 2: input, 3: share, 4: done
+  int _step = 0;
   PinModel? _savedPin;
 
   XFile? _pickedFile;
@@ -108,6 +109,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   }
 
   Future<void> _pickAndVerify(bool fromCamera) async {
+    final l = AppLocalizations.of(context);
     final picker = ImagePicker();
     final XFile? file = fromCamera
         ? await picker.pickImage(source: ImageSource.camera, imageQuality: 85)
@@ -119,7 +121,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       _step = 1;
       _isVerifying = true;
       _locationValid = false;
-      _verifyMessage = '위치를 확인하는 중...';
+      _verifyMessage = l.verifyingLocationMsg;
       _distanceMeters = null;
     });
 
@@ -128,7 +130,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       setState(() {
         _isVerifying = false;
         _locationValid = false;
-        _verifyMessage = '현재 위치를 가져올 수 없습니다.\nGPS 권한을 확인해주세요.';
+        _verifyMessage = l.noGpsMsg;
       });
       return;
     }
@@ -137,7 +139,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       setState(() {
         _isVerifying = false;
         _locationValid = true;
-        _verifyMessage = '카메라로 촬영한 사진은 현재 위치에서\n찍힌 것으로 자동 인증됩니다.';
+        _verifyMessage = l.cameraVerifyMsg;
         _distanceMeters = 0;
         _pinLat = currentPos.latitude;
         _pinLng = currentPos.longitude;
@@ -150,7 +152,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       setState(() {
         _isVerifying = false;
         _locationValid = false;
-        _verifyMessage = 'EXIF 위치 정보가 없는 사진입니다.\n위치 정보가 포함된 사진을 선택해주세요.';
+        _verifyMessage = l.noExifMsg;
       });
       return;
     }
@@ -170,8 +172,8 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
         _pinLng = exifPos.lng;
       }
       _verifyMessage = valid
-          ? '위치 인증 성공!\n사진 촬영 장소와 현재 위치가 일치합니다.'
-          : '위치 불일치로 업로드가 제한됩니다.\n사진 촬영 장소(${dist.toStringAsFixed(0)}m 떨어짐)에서만 핀을 등록할 수 있습니다.';
+          ? l.verifySuccessMsg
+          : l.verifyFailMsg(dist.toStringAsFixed(0));
     });
   }
 
@@ -217,6 +219,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -227,7 +230,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          ['사진 선택', '위치 확인', '핀 정보 입력', '커뮤니티 공유', '등록 완료'][_step],
+          l.createSteps[_step],
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         centerTitle: true,
@@ -280,30 +283,31 @@ class _SourceStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          const Text('사진을 어떻게 추가할까요?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          Text(l.photoSourceQ,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text('카메라로 직접 찍거나 갤러리에서 선택하세요.',
-              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          Text(l.photoSourceDesc,
+              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
           const SizedBox(height: 40),
           _SourceCard(
             icon: Icons.camera_alt,
-            title: '카메라로 촬영',
-            subtitle: '지금 이 위치에서 바로 찍기',
-            badge: '추천',
+            title: l.camera,
+            subtitle: l.cameraSubtitle,
+            badge: l.recommended,
             onTap: () => onPick(true),
           ),
           const SizedBox(height: 16),
           _SourceCard(
             icon: Icons.photo_library_outlined,
-            title: '갤러리에서 선택',
-            subtitle: 'GPS 정보가 포함된 사진만 등록 가능',
+            title: l.gallery,
+            subtitle: l.gallerySubtitle,
             badge: null,
             onTap: () => onPick(false),
           ),
@@ -314,15 +318,15 @@ class _SourceStep extends StatelessWidget {
               color: const Color(0xFFFFF3E0),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 18, color: Color(0xFFE65100)),
-                SizedBox(width: 10),
+                const Icon(Icons.info_outline, size: 18, color: Color(0xFFE65100)),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '갤러리 사진의 촬영 장소와 현재 위치가 500m 이내여야 핀 등록이 가능합니다.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFFE65100), height: 1.5),
+                    l.location500mInfo,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFFE65100), height: 1.5),
                   ),
                 ),
               ],
@@ -426,6 +430,7 @@ class _VerifyStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       children: [
         if (file != null)
@@ -445,27 +450,28 @@ class _VerifyStep extends StatelessWidget {
                 if (isVerifying) ...[
                   const CircularProgressIndicator(color: AppTheme.primary),
                   const SizedBox(height: 20),
-                  const Text('위치를 확인하는 중...', style: TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
+                  Text(l.verifyingLocationMsg,
+                      style: const TextStyle(fontSize: 16, color: AppTheme.textSecondary)),
                 ] else ...[
                   Container(
                     width: 64, height: 64,
                     decoration: BoxDecoration(
-                      color: isValid ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                      color: isValid ? const Color(0xFFF0FDF4) : const Color(0xFFFFEBEE),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       isValid ? Icons.check_circle : Icons.cancel,
-                      color: isValid ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                      color: isValid ? const Color(0xFF14532D) : const Color(0xFFC62828),
                       size: 36,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    isValid ? '위치 인증 성공' : '위치 불일치',
+                    isValid ? l.locationSuccess : l.locationFail,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: isValid ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                      color: isValid ? const Color(0xFF14532D) : const Color(0xFFC62828),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -488,7 +494,7 @@ class _VerifyStep extends StatelessWidget {
                           const Icon(Icons.social_distance, size: 18, color: AppTheme.textSecondary),
                           const SizedBox(width: 8),
                           Text(
-                            '촬영 장소까지 ${distance!.toStringAsFixed(0)}m',
+                            l.distanceToLocation(distance!.toStringAsFixed(0)),
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -498,28 +504,26 @@ class _VerifyStep extends StatelessWidget {
                   const Spacer(),
                   if (onContinue != null)
                     SizedBox(
-                      width: double.infinity,
-                      height: 52,
+                      width: double.infinity, height: 52,
                       child: ElevatedButton(
                         onPressed: onContinue,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        child: const Text('다음 단계로', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                        child: Text(l.next, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    width: double.infinity,
-                    height: 52,
+                    width: double.infinity, height: 52,
                     child: OutlinedButton(
                       onPressed: onRetry,
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFDDDDDD)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: const Text('다시 선택', style: TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
+                      child: Text(l.retry, style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -571,13 +575,14 @@ class _InputStepState extends State<_InputStep> {
   bool _isLoadingAi = false;
 
   Future<void> _fetchAiInfo() async {
+    final l = AppLocalizations.of(context);
     final title = widget.titleCtrl.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('먼저 장소 이름을 입력해주세요.'),
+        SnackBar(
+          content: Text(l.aiEnterNameFirst),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
@@ -597,17 +602,18 @@ class _InputStepState extends State<_InputStep> {
   }
 
   void _showAddCategoryDialog() {
+    final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('카테고리 만들기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        title: Text(l.createCategory, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: '카테고리 이름 입력',
+            hintText: l.categoryNameHint,
             hintStyle: const TextStyle(color: AppTheme.textSecondary),
             filled: true,
             fillColor: AppTheme.background,
@@ -628,7 +634,7 @@ class _InputStepState extends State<_InputStep> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(l.cancel, style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -644,7 +650,7 @@ class _InputStepState extends State<_InputStep> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               elevation: 0,
             ),
-            child: const Text('추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            child: Text(l.add, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -653,6 +659,7 @@ class _InputStepState extends State<_InputStep> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -669,7 +676,7 @@ class _InputStepState extends State<_InputStep> {
           const SizedBox(height: 24),
           Row(
             children: [
-              const Text('카테고리', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              Text(l.category, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               const Spacer(),
               GestureDetector(
                 onTap: _showAddCategoryDialog,
@@ -679,12 +686,12 @@ class _InputStepState extends State<_InputStep> {
                     color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add, size: 14, color: AppTheme.primary),
-                      SizedBox(width: 3),
-                      Text('새 카테고리', style: TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                      const Icon(Icons.add, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 3),
+                      Text(l.newCategory, style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -728,13 +735,13 @@ class _InputStepState extends State<_InputStep> {
               }).toList(),
             ),
           const SizedBox(height: 24),
-          const Text('장소 이름', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(l.placeName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           TextField(
             controller: widget.titleCtrl,
             maxLength: 50,
             decoration: InputDecoration(
-              hintText: '예: 북한산 백운대 정상',
+              hintText: l.placeNameHint,
               hintStyle: const TextStyle(color: AppTheme.textSecondary),
               filled: true,
               fillColor: AppTheme.background,
@@ -754,7 +761,6 @@ class _InputStepState extends State<_InputStep> {
             ),
           ),
           const SizedBox(height: 8),
-          // AI 장소 정보 버튼
           _AiInfoSection(
             isLoading: _isLoadingAi,
             info: _aiInfo,
@@ -762,14 +768,14 @@ class _InputStepState extends State<_InputStep> {
             onUseDescription: _useAiDescription,
           ),
           const SizedBox(height: 20),
-          const Text('설명', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(l.description, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           TextField(
             controller: widget.descCtrl,
             maxLines: 4,
             maxLength: 500,
             decoration: InputDecoration(
-              hintText: '이 장소에 대해 자유롭게 설명해주세요.',
+              hintText: l.descriptionHint,
               hintStyle: const TextStyle(color: AppTheme.textSecondary),
               filled: true,
               fillColor: AppTheme.background,
@@ -790,8 +796,7 @@ class _InputStepState extends State<_InputStep> {
           ),
           const SizedBox(height: 32),
           SizedBox(
-            width: double.infinity,
-            height: 54,
+            width: double.infinity, height: 54,
             child: ElevatedButton(
               onPressed: widget.isSubmitting ? null : widget.onSubmit,
               style: ElevatedButton.styleFrom(
@@ -801,7 +806,7 @@ class _InputStepState extends State<_InputStep> {
               ),
               child: widget.isSubmitting
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('핀 등록하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                  : Text(l.submitPin, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
           const SizedBox(height: 24),
@@ -828,6 +833,7 @@ class _AiInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -840,32 +846,22 @@ class _AiInfoSection extends StatelessWidget {
                   ? AppTheme.primary.withValues(alpha: 0.05)
                   : const Color(0xFFF0F7FF),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppTheme.primary.withValues(alpha: 0.25),
-              ),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isLoading)
                   const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.primary,
-                    ),
+                    width: 14, height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
                   )
                 else
                   const Icon(Icons.auto_awesome, size: 15, color: AppTheme.primary),
                 const SizedBox(width: 6),
                 Text(
-                  isLoading ? 'AI 장소 정보 불러오는 중...' : 'AI로 장소 정보 가져오기',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  isLoading ? l.aiFetching : l.aiFetchLocation,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.primary, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -888,18 +884,13 @@ class _LandmarkInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8F0FE)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFD4EDDC)),
+        boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -914,25 +905,13 @@ class _LandmarkInfoCard extends StatelessWidget {
               children: [
                 const Icon(Icons.auto_awesome, size: 14, color: AppTheme.primary),
                 const SizedBox(width: 6),
-                const Text(
-                  'AI 장소 정보',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
-                  ),
-                ),
+                Text(l.aiInfo, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary)),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    info.sourceLabel,
-                    style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                  child: Text(info.sourceLabel,
+                      style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -942,16 +921,16 @@ class _LandmarkInfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoRow(icon: Icons.history_edu_outlined, label: '유래/역사', text: info.origin),
+                _InfoRow(icon: Icons.history_edu_outlined, label: l.originHistory, text: info.origin),
                 const SizedBox(height: 10),
-                _InfoRow(icon: Icons.place_outlined, label: '볼거리/특징', text: info.highlights),
+                _InfoRow(icon: Icons.place_outlined, label: l.highlights, text: info.highlights),
                 if (info.bestTime != null && info.bestTime!.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  _InfoRow(icon: Icons.calendar_today_outlined, label: '방문 시기', text: info.bestTime!),
+                  _InfoRow(icon: Icons.calendar_today_outlined, label: l.bestTime, text: info.bestTime!),
                 ],
                 if (info.tip != null && info.tip!.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  _InfoRow(icon: Icons.tips_and_updates_outlined, label: '방문 팁', text: info.tip!),
+                  _InfoRow(icon: Icons.tips_and_updates_outlined, label: l.visitTip, text: info.tip!),
                 ],
                 const SizedBox(height: 14),
                 SizedBox(
@@ -959,10 +938,8 @@ class _LandmarkInfoCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onUseDescription,
                     icon: const Icon(Icons.edit_note, size: 16, color: Colors.white),
-                    label: const Text(
-                      '이 내용으로 설명 채우기',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
+                    label: Text(l.useAiDescription,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -998,23 +975,9 @@ class _InfoRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primary,
-                ),
-              ),
+              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary)),
               const SizedBox(height: 2),
-              Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textSecondary,
-                  height: 1.5,
-                ),
-              ),
+              Text(text, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5)),
             ],
           ),
         ),
@@ -1060,6 +1023,7 @@ class _ShareStepState extends State<_ShareStep> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
     }
@@ -1068,25 +1032,22 @@ class _ShareStepState extends State<_ShareStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('커뮤니티에 공유할까요?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          Text(l.shareToCommunityQ,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text('멤버들과 이 핀을 함께 즐겨보세요',
-              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          Text(l.shareSubtitle,
+              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
           const SizedBox(height: 24),
           if (_communities.isEmpty)
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.background,
-                borderRadius: BorderRadius.circular(16),
-              ),
+              decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(16)),
               child: Column(
                 children: [
                   Icon(Icons.people_outline, size: 44, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
                   const SizedBox(height: 10),
-                  const Text('아직 참여한 커뮤니티가 없어요',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                  Text(l.noCommunity,
+                      style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                 ],
               ),
             )
@@ -1130,7 +1091,8 @@ class _ShareStepState extends State<_ShareStep> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(c.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                                Text(c.description, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                Text(c.description,
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                                     maxLines: 1, overflow: TextOverflow.ellipsis),
                               ],
                             ),
@@ -1166,7 +1128,7 @@ class _ShareStepState extends State<_ShareStep> {
               child: _sharing
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : Text(
-                      _selected.isEmpty ? '커뮤니티를 선택하세요' : '${_selected.length}개 커뮤니티에 공유하기',
+                      _selected.isEmpty ? l.selectCommunity : l.shareNCommunities(_selected.length),
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
@@ -1175,7 +1137,7 @@ class _ShareStepState extends State<_ShareStep> {
             width: double.infinity, height: 52,
             child: TextButton(
               onPressed: _sharing ? null : widget.onSkip,
-              child: const Text('건너뛰기', style: TextStyle(fontSize: 15, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+              child: Text(l.skip, style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -1192,6 +1154,7 @@ class _DoneStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -1206,23 +1169,19 @@ class _DoneStep extends StatelessWidget {
             child: const Icon(Icons.location_on, color: AppTheme.primary, size: 52),
           ),
           const SizedBox(height: 28),
-          const Text('핀이 등록됐어요!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+          Text(l.pinRegistered, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          const Text(
-            '지도에서 내 핀을 확인할 수 있어요.',
-            style: TextStyle(fontSize: 15, color: AppTheme.textSecondary),
-          ),
+          Text(l.pinRegisteredDesc, style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
           const SizedBox(height: 48),
           SizedBox(
-            width: double.infinity,
-            height: 54,
+            width: double.infinity, height: 54,
             child: ElevatedButton(
               onPressed: onClose,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+              child: Text(l.done, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
         ],
