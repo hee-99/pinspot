@@ -428,7 +428,6 @@ class _SocialBtn extends StatelessWidget {
       height: 52,
       child: Material(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: border ?? BorderSide.none,
