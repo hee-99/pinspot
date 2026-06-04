@@ -276,12 +276,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
               _sectionHeader('내 커뮤니티', _joined.length),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 156,
+                  height: 144,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                     itemCount: _joined.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (_, i) => _JoinedCard(community: _joined[i], onTap: () => _openDetail(_joined[i])),
                   ),
                 ),
@@ -455,7 +455,7 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-// ─── 내 커뮤니티 가로 카드 ────────────────────────────────────────────────────
+// ─── 내 커뮤니티 가로 카드 (워크스페이스 아이콘 스타일) ─────────────────────
 class _JoinedCard extends StatelessWidget {
   final CommunityModel community;
   final VoidCallback onTap;
@@ -467,32 +467,41 @@ class _JoinedCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 130,
-        decoration: _cardDeco(radius: 20),
+        width: 104,
+        decoration: _cardDeco(radius: 18),
         clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // 이모지 배너
-          Container(
-            height: 72,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-            ),
-            child: _communityBannerContent(community, color),
-          ),
-          // 정보
+        child: Column(children: [
+          // 상단: 컬러 배경 + 큰 이모지
           Expanded(
+            flex: 3,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.13),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+              child: community.imagePath != null && !kIsWeb
+                  ? Image.file(File(community.imagePath!), fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          Center(child: Text(community.emoji, style: const TextStyle(fontSize: 30))))
+                  : Center(child: Text(community.emoji, style: const TextStyle(fontSize: 32))),
+            ),
+          ),
+          // 하단: 이름 + 핀수
+          Expanded(
+            flex: 2,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(community.name,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kText1, height: 1.3),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
-                const Spacer(),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kText1),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
                 Row(children: [
-                  Icon(Icons.location_on, size: 11, color: color),
+                  Icon(Icons.location_on, size: 10, color: color),
                   const SizedBox(width: 2),
-                  Text('${_fmt(community.pinCount)}핀', style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+                  Text('${_fmt(community.pinCount)}핀',
+                      style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
                 ]),
               ]),
             ),
@@ -503,7 +512,7 @@ class _JoinedCard extends StatelessWidget {
   }
 }
 
-// ─── 둘러보기 카드 ────────────────────────────────────────────────────────────
+// ─── 둘러보기 카드 (좌측 컬러 패널 스타일) ───────────────────────────────────
 class _ExploreCard extends StatelessWidget {
   final CommunityModel community;
   final VoidCallback onTap;
@@ -516,84 +525,86 @@ class _ExploreCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: 108,
         decoration: _cardDeco(),
         clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // 이모지 배너 (라이트 배경)
+        child: Row(children: [
+          // 좌측: 컬러 패널
           Container(
-            height: 80,
-            width: double.infinity,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.08)),
-            child: Stack(children: [
-              Positioned(
-                right: -8, top: -8,
-                child: Opacity(opacity: 0.08, child: Text(community.emoji, style: const TextStyle(fontSize: 80))),
+            width: 88,
+            color: color.withValues(alpha: 0.13),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              community.imagePath != null && !kIsWeb
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(File(community.imagePath!), width: 44, height: 44, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Text(community.emoji, style: const TextStyle(fontSize: 30))))
+                  : Text(community.emoji, style: const TextStyle(fontSize: 32)),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text('${_fmt(community.pinCount)}핀',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color)),
               ),
-              Center(child: _communityBannerContent(community, color)),
             ]),
           ),
-          // 정보 영역
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(community.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _kText1, letterSpacing: -0.3)),
-              const SizedBox(height: 3),
-              Text(community.description, style: const TextStyle(fontSize: 12, color: _kText2), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 10),
-              Row(children: [
-                // 핀 수 뱃지
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.location_on, size: 11, color: color),
-                    const SizedBox(width: 3),
-                    Text('${_fmt(community.pinCount)}핀', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.people_outline, size: 13, color: _kText2),
-                const SizedBox(width: 3),
-                Text(_fmt(community.memberCount), style: const TextStyle(fontSize: 11, color: _kText2)),
-                if (community.isPrivate) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                    child: const Text('비공개', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+          // 우측: 정보
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(community.name,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _kText1),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                ],
-                const Spacer(),
-                GestureDetector(
-                  onTap: onJoin,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 3))],
+                  if (community.isPrivate)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Text('비공개', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
                     ),
-                    child: const Text('참여', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                ]),
+                const SizedBox(height: 4),
+                Text(community.description,
+                    style: const TextStyle(fontSize: 12, color: _kText2),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const Spacer(),
+                Row(children: [
+                  Icon(Icons.people_outline, size: 12, color: _kText2),
+                  const SizedBox(width: 3),
+                  Text('${_fmt(community.memberCount)}명',
+                      style: const TextStyle(fontSize: 11, color: _kText2)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: onJoin,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 3))],
+                      ),
+                      child: const Text('참여', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ),
                   ),
-                ),
+                ]),
               ]),
-            ]),
+            ),
           ),
         ]),
       ),
     );
   }
-}
-
-// ─── 커뮤니티 배너 콘텐츠 헬퍼 ───────────────────────────────────────────────
-Widget _communityBannerContent(CommunityModel community, Color color) {
-  if (community.imagePath != null && !kIsWeb) {
-    return SizedBox.expand(
-      child: Image.file(File(community.imagePath!), fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Center(child: Text(community.emoji, style: const TextStyle(fontSize: 32)))),
-    );
-  }
-  return Center(child: Text(community.emoji, style: const TextStyle(fontSize: 32)));
 }
 
 // ─── 코드로 참여 바텀시트 ─────────────────────────────────────────────────────

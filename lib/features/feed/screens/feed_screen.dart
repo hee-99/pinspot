@@ -200,6 +200,18 @@ class _FeedScreenState extends State<FeedScreen> {
 
             // ── 이번 주 인기 지도 ──────────────────────────────────────────
             const SliverToBoxAdapter(child: _SectionHeader(title: '🔥 이번 주 인기 지도')),
+            // 히어로 카드 (첫 번째 지도 강조)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: _FeaturedMapCard(
+                  map: _discoverMaps[0],
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => _PinDetailScreen(post: _allPosts[0]))),
+                ),
+              ),
+            ),
+            // 나머지 2열 그리드
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverGrid(
@@ -208,11 +220,11 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, i) => _DiscoverMapCard(
-                    map: _discoverMaps[i],
+                    map: _discoverMaps[i + 1],
                     onTap: () => Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => _PinDetailScreen(post: _allPosts[i % _allPosts.length]))),
+                      builder: (_) => _PinDetailScreen(post: _allPosts[(i + 1) % _allPosts.length]))),
                   ),
-                  childCount: _discoverMaps.length,
+                  childCount: _discoverMaps.length - 1,
                 ),
               ),
             ),
@@ -487,6 +499,79 @@ class _DiscoverMapCard extends StatelessWidget {
             ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+// ─── 히어로 지도 카드 (풀와이드 피처드) ──────────────────────────────────────
+class _FeaturedMapCard extends StatelessWidget {
+  final _DiscoverMap map;
+  final VoidCallback? onTap;
+  const _FeaturedMapCard({required this.map, this.onTap});
+
+  String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 156,
+        decoration: _cardDeco(),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            // 좌측: 컬러 배경 + 대형 이모지
+            Container(
+              width: 128,
+              color: map.color.withValues(alpha: 0.12),
+              child: Center(child: Text(map.emoji, style: const TextStyle(fontSize: 58))),
+            ),
+            // 우측: 정보
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: map.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('✨ 이번 주 픽',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: map.color)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    map.name.replaceAll('\n', ' '),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _kText1, height: 1.25),
+                    maxLines: 2,
+                  ),
+                  const Spacer(),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: map.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text('${map.pinCount}핀',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: map.color)),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 3),
+                    Text(_fmt(map.likes),
+                        style: const TextStyle(fontSize: 11, color: _kText2, fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 5),
+                  Text(map.creator, style: const TextStyle(fontSize: 11, color: _kText2)),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
