@@ -252,7 +252,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                   dividerColor: _kBg,
                   labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-                  tabs: const [Tab(text: '✨ 발견'), Tab(text: '👥 그룹'), Tab(text: '🔔 팔로잉')],
+                  tabs: const [Tab(text: '👥 그룹'), Tab(text: '✨ 발견'), Tab(text: '🔔 팔로잉')],
                 ),
               ),
             ),
@@ -261,7 +261,6 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         body: TabBarView(
           controller: _tabCtrl,
           children: [
-            _DiscoverTab(savedPins: _savedPins, pinsByCategory: _pinsByCategory),
             _GroupsTab(
               communities: _communities, loading: _loading,
               joined: _joined, explore: _explore, featured: _featured,
@@ -271,6 +270,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
               onOpenCreate: _openCreate, onJoinByCode: _showJoinByCode,
               onOpenDetail: _openDetail, onToggleJoin: _toggleJoin,
             ),
+            _DiscoverTab(savedPins: _savedPins, pinsByCategory: _pinsByCategory),
             _FollowingTab(communityPins: _communityPins),
           ],
         ),
