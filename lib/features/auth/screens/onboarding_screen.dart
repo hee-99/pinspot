@@ -48,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: const Color(0xFFF5F3EE),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -173,7 +173,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         decoration: const BoxDecoration(
-          color: AppTheme.surface,
+          color: Color(0xFFF5F3EE),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
@@ -254,10 +254,10 @@ class _AgreementItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: agreed ? AppTheme.primary.withValues(alpha: 0.05) : AppTheme.background,
+          color: agreed ? AppTheme.primary.withValues(alpha: 0.06) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: agreed ? AppTheme.primary.withValues(alpha: 0.3) : const Color(0xFFEEEEEE),
+            color: agreed ? AppTheme.primary.withValues(alpha: 0.3) : const Color(0xFFE8E5DF),
           ),
         ),
         child: Row(

@@ -438,12 +438,12 @@ class _MapScreenState extends State<MapScreen> {
                           duration: const Duration(milliseconds: 160),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                           decoration: BoxDecoration(
-                            color: sel ? AppColors.primary : AppColors.surface,
+                            color: sel ? const Color(0xFF1C1C1E) : AppColors.surface,
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
                                 color: sel
-                                    ? AppColors.primary.withValues(alpha: 0.30)
+                                    ? Colors.black.withValues(alpha: 0.25)
                                     : Colors.black.withValues(alpha: 0.10),
                                 blurRadius: sel ? 8 : 4,
                                 offset: const Offset(0, 2),
@@ -454,7 +454,7 @@ class _MapScreenState extends State<MapScreen> {
                             label,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
+                              fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                               color: sel ? Colors.white : AppColors.neutral600,
                             ),
                           ),

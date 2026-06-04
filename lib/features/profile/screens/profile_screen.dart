@@ -112,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: _kCard,
               borderRadius: BorderRadius.circular(24),
             ),
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
@@ -168,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     labelText: l.nickname,
                     hintText: l.nicknameHint,
                     filled: true,
-                    fillColor: AppTheme.background,
+                    fillColor: _kBg,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -215,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       builder: (_) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: _kCard,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -274,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       builder: (_) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: _kCard,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -337,24 +337,27 @@ class _ProfileScreenState extends State<ProfileScreen>
     final l = AppLocalizations.of(context);
     if (_loading) {
       return const Scaffold(
-        backgroundColor: AppTheme.background,
+        backgroundColor: _kBg,
         body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
     }
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: _kBg,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: _kBg,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         title: Text(
           _user?.name ?? l.navProfile,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _kText1),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: _kText2),
             onPressed: _showSettings,
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: NestedScrollView(
@@ -379,6 +382,13 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 }
+
+// ─── 색상 토큰 (피드·커뮤니티와 통일) ─────────────────────────────────────────
+const _kBg    = Color(0xFFF5F3EE);
+const _kCard  = Color(0xFFFFFFFF);
+const _kText1 = Color(0xFF1C1C1E);
+const _kText2 = Color(0xFF6B7280);
+const _kText3 = Color(0xFFC9C5BE);
 
 // ─── 설정 아이템 ──────────────────────────────────────────────────────────────
 
@@ -434,18 +444,33 @@ class _ProfileHeader extends StatelessWidget {
         Stack(
           clipBehavior: Clip.none,
           children: [
-            Container(
-              height: 120,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF091408), Color(0xFF16A34A)],
-                ),
-              ),
-              child: Opacity(
-                opacity: 0.08,
-                child: CustomPaint(painter: _DotGridPainter()),
+            SizedBox(
+              height: 130,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0D1A0A), Color(0xFF2D6A4F), Color(0xFF16A34A)],
+                        stops: [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                  Opacity(
+                    opacity: 0.06,
+                    child: CustomPaint(painter: _DotGridPainter()),
+                  ),
+                  Positioned(
+                    right: 20, bottom: 16,
+                    child: Opacity(
+                      opacity: 0.18,
+                      child: const Text('📍', style: TextStyle(fontSize: 68)),
+                    ),
+                  ),
+                ],
               ),
             ),
             // 아바타 (커버와 겹침)
@@ -478,8 +503,8 @@ class _ProfileHeader extends StatelessWidget {
 
         // ── 유저 정보 ──────────────────────────────────────────────
         Container(
-          color: AppTheme.surface,
-          padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
+          color: _kCard,
+          padding: const EdgeInsets.fromLTRB(20, 54, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -507,7 +532,7 @@ class _ProfileHeader extends StatelessWidget {
               if (user?.email != null) ...[
                 const SizedBox(height: 3),
                 Text(user!.email!,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: const TextStyle(color: _kText2, fontSize: 12),
                     overflow: TextOverflow.ellipsis),
               ],
               const SizedBox(height: 18),
@@ -609,17 +634,16 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.neutral50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.neutral200),
+        color: _kBg,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.neutral900, letterSpacing: -0.5)),
-          const SizedBox(height: 1),
-          Text(label, style: const TextStyle(fontSize: 10, color: AppColors.neutral400, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _kText1, letterSpacing: -0.5)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 10, color: _kText2, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -639,13 +663,14 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: AppTheme.surface,
+      color: _kCard,
       child: TabBar(
         controller: tabController,
-        labelColor: AppTheme.primary,
-        unselectedLabelColor: AppTheme.textSecondary,
-        indicatorColor: AppTheme.primary,
-        indicatorWeight: 2,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: _kText3,
+        indicatorColor: AppColors.primary,
+        indicatorWeight: 2.5,
+        dividerColor: _kBg,
         tabs: const [
           Tab(icon: Icon(Icons.grid_on_outlined, size: 20)),
           Tab(icon: Icon(Icons.map_outlined, size: 20)),
@@ -704,11 +729,11 @@ class _ContentTabState extends State<_ContentTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_off_outlined, size: 48, color: AppTheme.textSecondary),
+            const Text('📍', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
             Text(l.noPins,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.6)),
+                style: const TextStyle(color: _kText2, fontSize: 14, height: 1.6)),
           ],
         ),
       );
@@ -719,7 +744,7 @@ class _ContentTabState extends State<_ContentTab> {
     return Column(
       children: [
         Container(
-          color: AppTheme.surface,
+          color: _kCard,
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -738,18 +763,16 @@ class _ContentTabState extends State<_ContentTab> {
                       duration: const Duration(milliseconds: 180),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.primary : AppTheme.background,
+                        color: isSelected ? _kText1 : _kBg,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected ? AppTheme.primary : const Color(0xFFE0E0E0),
-                        ),
+                        boxShadow: isSelected ? null : const [BoxShadow(color: Color(0x09000000), blurRadius: 6, offset: Offset(0, 2))],
                       ),
                       child: Text(
                         '$cat  $count',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? Colors.white : AppTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.white : _kText2,
                         ),
                       ),
                     ),
@@ -764,18 +787,18 @@ class _ContentTabState extends State<_ContentTab> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '${_filtered.length}',
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              '${_filtered.length}개',
+              style: const TextStyle(fontSize: 12, color: _kText2, fontWeight: FontWeight.w500),
             ),
           ),
         ),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.all(1),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 1,
-              mainAxisSpacing: 1,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
             ),
             itemCount: _filtered.length,
             itemBuilder: (context, index) => _PinThumbnail(pin: _filtered[index]),
@@ -817,10 +840,10 @@ class _PinThumbnail extends StatelessWidget {
 
   Widget _buildPhoto() {
     if (pin.photoPath != null && !kIsWeb) {
-      return Image.file(
-        File(pin.photoPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(File(pin.photoPath!), fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder()),
       );
     }
     return _placeholder();
@@ -828,10 +851,11 @@ class _PinThumbnail extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: AppTheme.primary.withValues(alpha: 0.08),
-      child: const Center(
-        child: Icon(Icons.location_on, size: 28, color: AppTheme.primary),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(12),
       ),
+      child: const Center(child: Icon(Icons.location_on, size: 28, color: AppColors.primary)),
     );
   }
 }
@@ -977,7 +1001,7 @@ class _MyMapTabState extends State<_MyMapTab> {
               Positioned(
                 top: 0, left: 0, right: 0, height: filterBarHeight,
                 child: Container(
-                  color: AppTheme.surface,
+                  color: _kCard,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -996,18 +1020,16 @@ class _MyMapTabState extends State<_MyMapTab> {
                               duration: const Duration(milliseconds: 180),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppTheme.primary : AppTheme.background,
+                                color: isSelected ? _kText1 : _kBg,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected ? AppTheme.primary : const Color(0xFFE0E0E0),
-                                ),
+                                boxShadow: isSelected ? null : const [BoxShadow(color: Color(0x09000000), blurRadius: 6, offset: Offset(0, 2))],
                               ),
                               child: Text(
                                 widget.pins.isEmpty ? cat : '$cat  $count',
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                  color: isSelected ? Colors.white : AppTheme.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected ? Colors.white : _kText2,
                                 ),
                               ),
                             ),
@@ -1097,7 +1119,7 @@ class _MyMapTabState extends State<_MyMapTab> {
                 Positioned(
                   bottom: 0, left: 0, right: 0, height: placeChipsHeight,
                   child: Container(
-                    color: AppTheme.surface,
+                    color: _kCard,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1142,9 +1164,9 @@ class _PlaceChip extends StatelessWidget {
       width: 130,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        color: _kBg,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1153,18 +1175,18 @@ class _PlaceChip extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(4),
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(5),
             ),
             child: Text(
               pin.category,
-              style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             pin.title,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kText1),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1185,43 +1207,47 @@ class _SavedTab extends StatelessWidget {
     final l = AppLocalizations.of(context);
     if (pins.isEmpty) {
       return Center(
-        child: Text(l.noSavedPins,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('🔖', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          Text(l.noSavedPins, style: const TextStyle(color: _kText2, fontSize: 14)),
+        ]),
       );
     }
     return GridView.builder(
-      padding: const EdgeInsets.all(1),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 1,
-        mainAxisSpacing: 1,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
       ),
       itemCount: pins.length,
       itemBuilder: (context, index) {
         final pin = pins[index];
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            pin.photoPath != null && !kIsWeb
-                ? Image.file(File(pin.photoPath!), fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]))
-                : Container(color: Colors.grey[200]),
-            const Center(child: Icon(Icons.bookmark, size: 28, color: AppTheme.primary)),
-            Positioned(
-              bottom: 6, left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  pin.category,
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              pin.photoPath != null && !kIsWeb
+                  ? Image.file(File(pin.photoPath!), fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: AppColors.primaryLight))
+                  : Container(color: AppColors.primaryLight,
+                      child: const Center(child: Icon(Icons.bookmark_outline, size: 28, color: AppColors.primary))),
+              Positioned(
+                bottom: 6, left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(pin.category,
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

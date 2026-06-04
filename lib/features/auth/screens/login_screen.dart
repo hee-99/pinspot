@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 opacity: _cardFade,
                 child: Container(
                   decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                    color: Color(0xFFF5F3EE),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                   ),
                   child: SafeArea(
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           // 구글
                           _SocialBtn(
                             label: l.startWithGoogle,
-                            bg: AppColors.surface,
+                            bg: Colors.white,
                             fg: const Color(0xFF1F1F1F),
                             icon: const Text('G', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF4285F4))),
                             loading: _loadingProvider == 'google',
@@ -216,8 +216,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           // 이메일
                           _SocialBtn(
                             label: l.startWithEmail,
-                            bg: AppColors.neutral100,
-                            fg: AppColors.neutral900,
+                            bg: const Color(0xFFEEECE7),
+                            fg: const Color(0xFF1C1C1E),
                             icon: const Icon(Icons.mail_outline_rounded, color: AppColors.neutral600, size: 20),
                             loading: false,
                             onTap: _busy

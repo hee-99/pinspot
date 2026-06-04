@@ -56,7 +56,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
   Widget build(BuildContext context) {
     final color = widget.community.color;
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFF5F3EE),
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [
           SliverAppBar(
@@ -112,7 +112,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
           ),
           SliverToBoxAdapter(
             child: Container(
-              color: AppTheme.surface,
+              color: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 children: [
@@ -169,7 +169,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                             horizontal: 20, vertical: 9),
                         decoration: BoxDecoration(
                           color: _isJoined
-                              ? AppTheme.background
+                              ? const Color(0xFFF5F3EE)
                               : color,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
@@ -359,7 +359,7 @@ class _CommunityDetailPinCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
@@ -557,7 +557,7 @@ class _MapTabState extends State<_MapTab> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2)),
@@ -589,7 +589,7 @@ class _MapTabState extends State<_MapTab> {
             child: Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2)),
@@ -624,7 +624,7 @@ class _CommunityPinSheet extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -4)),
@@ -1054,10 +1054,10 @@ class _SortBar extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: active ? color : AppTheme.background,
+                  color: active ? color : const Color(0xFFF5F3EE),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: active ? color : AppTheme.textSecondary.withValues(alpha: 0.25),
+                    color: active ? color : const Color(0xFFC9C5BE),
                   ),
                 ),
                 child: Text(
@@ -1097,7 +1097,7 @@ class _MemberRow extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: highlight ? color.withValues(alpha: 0.06) : AppTheme.surface,
+        color: highlight ? color.withValues(alpha: 0.06) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: highlight
             ? Border.all(color: color.withValues(alpha: 0.25))
