@@ -15,11 +15,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0; // 기본: 지도
+  int _currentIndex = 1; // 기본: 지도
 
   static const _screens = [
-    MapScreen(),
     SizedBox.shrink(), // Pin → CreatePinScreen 모달
+    MapScreen(),
     CommunityScreen(),
     ProfileScreen(),
   ];
@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 1) {
+    if (index == 0) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const CreatePinScreen()),
       );
@@ -97,12 +97,11 @@ class _BottomNav extends StatelessWidget {
           height: 60,
           child: Row(
             children: [
-              _NavItem(icon: Icons.map_outlined, activeIcon: Icons.map, label: l.navMap, index: 0, current: currentIndex, onTap: onTap),
-              // 핀 버튼 (중앙 액션)
+              // 핀 버튼 (왼쪽 첫 번째)
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(1),
+                  onTap: () => onTap(0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -121,6 +120,7 @@ class _BottomNav extends StatelessWidget {
                   ),
                 ),
               ),
+              _NavItem(icon: Icons.map_outlined, activeIcon: Icons.map, label: l.navMap, index: 1, current: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.groups_outlined, activeIcon: Icons.groups, label: l.navCommunity, index: 2, current: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: l.navProfile, index: 3, current: currentIndex, onTap: onTap),
             ],
