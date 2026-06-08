@@ -1,4 +1,4 @@
-package com.pinspot.pinspot
+package com.pinspot.app
 
 import io.flutter.embedding.android.FlutterActivity
 
