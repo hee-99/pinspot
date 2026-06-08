@@ -12,6 +12,10 @@ val keyPropertiesFile = rootProject.file("key.properties")
 val keyProperties = Properties()
 keyProperties.load(FileInputStream(keyPropertiesFile))
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) localProperties.load(FileInputStream(localPropertiesFile))
+
 android {
     namespace = "com.pinspot.app"
     compileSdk = flutter.compileSdkVersion
@@ -35,6 +39,9 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
+        manifestPlaceholders["googleMapsApiKey"] = localProperties.getProperty("GOOGLE_MAPS_API_KEY", "")
+        manifestPlaceholders["naverClientId"] = localProperties.getProperty("NAVER_CLIENT_ID", "")
+        manifestPlaceholders["naverClientSecret"] = localProperties.getProperty("NAVER_CLIENT_SECRET", "")
     }
 
     signingConfigs {

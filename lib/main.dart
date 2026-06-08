@@ -7,7 +7,7 @@ import 'core/services/landmark_info_service.dart';
 import 'core/services/locale_service.dart';
 import 'features/auth/screens/splash_screen.dart';
 
-const String _kakaoAppKey = 'ae6d4510551c051be86b63cd2809ec82';
+const String _kakaoAppKey = String.fromEnvironment('KAKAO_APP_KEY');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

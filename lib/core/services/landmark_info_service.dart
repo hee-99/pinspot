@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/landmark_info_model.dart';
 
-// Google AI Studio(https://aistudio.google.com)에서 발급받은 Gemini API 키
-const String kGeminiApiKey = 'AIzaSyDGqhxEmVepf4QmVoC_vq0qba9K7V4Drrs';
+const String kGeminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
 
 class LandmarkInfoService {
   static const _geminiModel = 'gemini-flash-lite-latest';

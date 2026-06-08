@@ -46,3 +46,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# API 키 파일 (절대 커밋 금지)
+dart_defines/keys.env
