@@ -123,6 +123,12 @@ class AppLocalizations {
   String get locationFail => _t('location_fail');
   String get noGpsMsg => _t('no_gps_msg');
   String get noExifMsg => _t('no_exif_msg');
+  String get openLocationSettings => _t('open_location_settings');
+  String get useCameraInstead => _t('use_camera_instead');
+  String get goToLocation => _t('go_to_location');
+  String get noExifDetail => _t('no_exif_detail');
+  String get distanceFailDetail => _t('distance_fail_detail');
+  String get gpsFailDetail => _t('gps_fail_detail');
   String get cameraVerifyMsg => _t('camera_verify_msg');
   String get verifySuccessMsg => _t('verify_success_msg');
   String verifyFailMsg(String dist) => _tp('verify_fail_msg', {'dist': dist});
@@ -324,6 +330,12 @@ const _strings = <String, Map<String, String>>{
     'location_fail': '위치 불일치',
     'no_gps_msg': '현재 위치를 가져올 수 없습니다.\nGPS 권한을 확인해주세요.',
     'no_exif_msg': 'EXIF 위치 정보가 없는 사진입니다.\n위치 정보가 포함된 사진을 선택해주세요.',
+    'open_location_settings': '위치 설정 열기',
+    'use_camera_instead': '카메라로 다시 찍기',
+    'go_to_location': '현장에서 다시 시도',
+    'no_exif_detail': 'Pinspot은 실제 방문한 장소만 등록할 수 있어요.\n카메라로 직접 찍거나, GPS 위치가 저장된 사진을 사용해주세요.',
+    'distance_fail_detail': 'Pinspot은 사진을 찍은 현장에서만 핀을 등록할 수 있어요.\n해당 장소에 방문해서 다시 시도해보세요.',
+    'gps_fail_detail': 'GPS 권한이 없으면 현장 인증이 불가능해요.\n설정에서 위치 권한을 허용한 뒤 다시 시도해주세요.',
     'camera_verify_msg': '카메라로 촬영한 사진은 현재 위치에서\n찍힌 것으로 자동 인증됩니다.',
     'verify_success_msg': '위치 인증 성공!\n사진 촬영 장소와 현재 위치가 일치합니다.',
     'verify_fail_msg': '위치 불일치로 업로드가 제한됩니다.\n사진 촬영 장소({dist}m 떨어짐)에서만 핀을 등록할 수 있습니다.',
@@ -482,6 +494,12 @@ const _strings = <String, Map<String, String>>{
     'location_fail': 'Location Mismatch',
     'no_gps_msg': 'Cannot get current location.\nPlease check GPS permissions.',
     'no_exif_msg': 'This photo has no EXIF location data.\nPlease select a photo with location info.',
+    'open_location_settings': 'Open Location Settings',
+    'use_camera_instead': 'Take Photo with Camera',
+    'go_to_location': 'Try Again On-Site',
+    'no_exif_detail': 'Pinspot only allows registering places you actually visited.\nUse the camera to take a photo, or use a photo with GPS data.',
+    'distance_fail_detail': 'Pinspot requires you to register pins at the actual location.\nVisit the place and try again.',
+    'gps_fail_detail': 'Location permission is required for on-site verification.\nEnable location access in Settings and try again.',
     'camera_verify_msg': 'Photos taken with camera are\nautomatically verified at current location.',
     'verify_success_msg': 'Location verified!\nPhoto location matches your current position.',
     'verify_fail_msg': 'Upload restricted due to location mismatch.\nYou can only register a pin at the photo\'s location ({dist}m away).',
@@ -640,6 +658,12 @@ const _strings = <String, Map<String, String>>{
     'location_fail': '位置不一致',
     'no_gps_msg': '現在位置を取得できません。\nGPS権限を確認してください。',
     'no_exif_msg': 'EXIFの位置情報がない写真です。\n位置情報が含まれた写真を選択してください。',
+    'open_location_settings': '位置情報設定を開く',
+    'use_camera_instead': 'カメラで撮影する',
+    'go_to_location': '現地で再試行',
+    'no_exif_detail': 'Pinspotは実際に訪れた場所のみ登録できます。\nカメラで直接撮影するか、GPS情報付きの写真を使用してください。',
+    'distance_fail_detail': 'Pinspotは写真を撮影した現地でのみピンを登録できます。\nその場所を訪れて再試行してください。',
+    'gps_fail_detail': 'GPS権限がないと現地認証ができません。\n設定で位置情報を許可してから再試行してください。',
     'camera_verify_msg': 'カメラで撮影した写真は現在位置で\n自動認証されます。',
     'verify_success_msg': '位置認証成功！\n撮影場所と現在位置が一致しています。',
     'verify_fail_msg': '位置不一致のためアップロードが制限されます。\n撮影場所（{dist}m離れています）でのみピンを登録できます。',
@@ -798,6 +822,12 @@ const _strings = <String, Map<String, String>>{
     'location_fail': '位置不匹配',
     'no_gps_msg': '无法获取当前位置。\n请检查GPS权限。',
     'no_exif_msg': '该照片没有EXIF位置信息。\n请选择包含位置信息的照片。',
+    'open_location_settings': '打开位置设置',
+    'use_camera_instead': '用相机拍摄',
+    'go_to_location': '前往现场重试',
+    'no_exif_detail': 'Pinspot只允许登记您实际到访的地方。\n请用相机直接拍摄，或使用含GPS信息的照片。',
+    'distance_fail_detail': 'Pinspot要求在实际拍摄地点登记坐标。\n请前往该地点后重试。',
+    'gps_fail_detail': '没有位置权限，无法进行现场验证。\n请在设置中开启位置访问权限后重试。',
     'camera_verify_msg': '相机拍摄的照片将在当前位置\n自动完成验证。',
     'verify_success_msg': '位置验证成功！\n照片拍摄地点与当前位置一致。',
     'verify_fail_msg': '因位置不匹配，上传受限。\n只能在照片拍摄地点（距此{dist}m）登记坐标。',

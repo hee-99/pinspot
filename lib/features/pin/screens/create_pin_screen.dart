@@ -15,6 +15,8 @@ import '../../../core/services/community_service.dart';
 import '../../../core/services/landmark_info_service.dart';
 import '../../../core/services/pin_service.dart';
 
+enum _FailReason { none, gps, exif, distance }
+
 class CreatePinScreen extends StatefulWidget {
   const CreatePinScreen({super.key});
 
@@ -33,6 +35,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   bool _locationValid = false;
   String _verifyMessage = '';
   double? _distanceMeters;
+  _FailReason _failReason = _FailReason.none;
 
   String _selectedCategory = '';
   final _titleCtrl = TextEditingController();
@@ -132,6 +135,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
         _isVerifying = false;
         _locationValid = false;
         _verifyMessage = l.noGpsMsg;
+        _failReason = _FailReason.gps;
       });
       return;
     }
@@ -144,6 +148,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
         _distanceMeters = 0;
         _pinLat = currentPos.latitude;
         _pinLng = currentPos.longitude;
+        _failReason = _FailReason.none;
       });
       return;
     }
@@ -154,6 +159,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
         _isVerifying = false;
         _locationValid = false;
         _verifyMessage = l.noExifMsg;
+        _failReason = _FailReason.exif;
       });
       return;
     }
@@ -168,6 +174,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       _isVerifying = false;
       _distanceMeters = dist;
       _locationValid = valid;
+      _failReason = valid ? _FailReason.none : _FailReason.distance;
       if (valid) {
         _pinLat = exifPos.lat;
         _pinLng = exifPos.lng;
@@ -250,8 +257,10 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               isValid: _locationValid,
               message: _verifyMessage,
               distance: _distanceMeters,
+              failReason: _failReason,
               onRetry: () => setState(() => _step = 0),
               onContinue: _locationValid ? () => setState(() => _step = 2) : null,
+              onOpenSettings: () => Geolocator.openLocationSettings(),
             ),
             _InputStep(
               file: _pickedFile,
@@ -418,8 +427,10 @@ class _VerifyStep extends StatelessWidget {
   final bool isValid;
   final String message;
   final double? distance;
+  final _FailReason failReason;
   final VoidCallback onRetry;
   final VoidCallback? onContinue;
+  final VoidCallback onOpenSettings;
 
   const _VerifyStep({
     required this.file,
@@ -427,8 +438,10 @@ class _VerifyStep extends StatelessWidget {
     required this.isValid,
     required this.message,
     required this.distance,
+    required this.failReason,
     required this.onRetry,
     required this.onContinue,
+    required this.onOpenSettings,
   });
 
   @override
@@ -463,7 +476,13 @@ class _VerifyStep extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isValid ? Icons.check_circle : Icons.cancel,
+                      isValid
+                          ? Icons.check_circle
+                          : (failReason == _FailReason.gps
+                              ? Icons.location_off_rounded
+                              : failReason == _FailReason.exif
+                                  ? Icons.image_not_supported_rounded
+                                  : Icons.place_rounded),
                       color: isValid ? const Color(0xFF14532D) : const Color(0xFFC62828),
                       size: 36,
                     ),
@@ -483,8 +502,37 @@ class _VerifyStep extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.6),
                   ),
-                  if (distance != null && distance! > 0) ...[
+                  if (!isValid) ...[
                     const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFDDB3)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFE65100)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              failReason == _FailReason.gps
+                                  ? l.gpsFailDetail
+                                  : failReason == _FailReason.exif
+                                      ? l.noExifDetail
+                                      : l.distanceFailDetail,
+                              style: const TextStyle(fontSize: 13, color: Color(0xFFE65100), height: 1.55),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (distance != null && distance! > 0) ...[
+                    const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
@@ -517,6 +565,63 @@ class _VerifyStep extends StatelessWidget {
                         child: Text(l.next, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     ),
+                  // 실패 케이스별 맞춤 액션 버튼
+                  if (!isValid && !isVerifying) ...[
+                    if (failReason == _FailReason.gps) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity, height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: onOpenSettings,
+                          icon: const Icon(Icons.settings_rounded, size: 18, color: Colors.white),
+                          label: Text(l.openLocationSettings,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1565C0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (failReason == _FailReason.exif) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity, height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            // onRetry가 step 0으로 돌아가므로 카메라 탭을 유도
+                            onRetry();
+                          },
+                          icon: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+                          label: Text(l.useCameraInstead,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (failReason == _FailReason.distance) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity, height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: onRetry,
+                          icon: const Icon(Icons.place_rounded, size: 18, color: Colors.white),
+                          label: Text(l.goToLocation,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE65100),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity, height: 52,
