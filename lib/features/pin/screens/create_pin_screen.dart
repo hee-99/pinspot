@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/models/landmark_info_model.dart';
 import '../../../core/models/pin_model.dart';
 import '../../../core/models/community_model.dart';
+import '../../../core/models/pin_rating_schema.dart';
 import '../../../core/services/category_service.dart';
 import '../../../core/services/community_service.dart';
 import '../../../core/services/landmark_info_service.dart';
@@ -45,6 +46,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   bool _categoriesLoaded = false;
   double? _pinLat;
   double? _pinLng;
+  Map<String, double> _ratings = {};
 
   @override
   void initState() {
@@ -205,6 +207,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       lng: _pinLng!,
       photoPath: kIsWeb ? null : _pickedFile?.path,
       createdAt: DateTime.now(),
+      ratings: _ratings.isNotEmpty ? Map.from(_ratings) : null,
     );
 
     await PinService.savePin(pin);
@@ -272,9 +275,11 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               isSubmitting: _isSubmitting,
               lat: _pinLat,
               lng: _pinLng,
-              onCategorySelect: (c) => setState(() => _selectedCategory = c),
+              onCategorySelect: (c) => setState(() { _selectedCategory = c; _ratings = {}; }),
               onAddCategory: _addNewCategory,
               onSubmit: _submit,
+              ratings: _ratings,
+              onRatingChange: (key, val) => setState(() => _ratings[key] = val),
             ),
             _ShareStep(
               pin: _savedPin,
@@ -658,6 +663,8 @@ class _InputStep extends StatefulWidget {
   final ValueChanged<String> onCategorySelect;
   final Future<void> Function(String) onAddCategory;
   final VoidCallback onSubmit;
+  final Map<String, double> ratings;
+  final void Function(String key, double value) onRatingChange;
 
   const _InputStep({
     required this.file,
@@ -672,6 +679,8 @@ class _InputStep extends StatefulWidget {
     required this.onCategorySelect,
     required this.onAddCategory,
     required this.onSubmit,
+    required this.ratings,
+    required this.onRatingChange,
   });
 
   @override
@@ -840,6 +849,23 @@ class _InputStepState extends State<_InputStep> {
                 );
               }).toList(),
             ),
+          if (widget.selectedCategory.isNotEmpty) ...[
+            Builder(builder: (context) {
+              final dims = PinRatingSchema.forCategory(widget.selectedCategory);
+              if (dims.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  _RatingSection(
+                    dimensions: dims,
+                    ratings: widget.ratings,
+                    onRatingChange: widget.onRatingChange,
+                  ),
+                ],
+              );
+            }),
+          ],
           const SizedBox(height: 24),
           Text(l.placeName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
@@ -1250,6 +1276,135 @@ class _ShareStepState extends State<_ShareStep> {
         ],
       ),
     );
+  }
+}
+
+// ─── 카테고리별 등급 입력 ─────────────────────────────────────────────────────────
+
+class _RatingSection extends StatelessWidget {
+  final List<RatingDimension> dimensions;
+  final Map<String, double> ratings;
+  final void Function(String key, double value) onRatingChange;
+
+  const _RatingSection({
+    required this.dimensions,
+    required this.ratings,
+    required this.onRatingChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Color(0x09000000), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.bar_chart_rounded, size: 16, color: AppTheme.primary),
+              SizedBox(width: 6),
+              Text('등급 평가', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              SizedBox(width: 6),
+              Text('선택사항', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...dimensions.map((dim) => _RatingRow(
+            dimension: dim,
+            value: ratings[dim.key],
+            onChanged: (v) => onRatingChange(dim.key, v),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingRow extends StatelessWidget {
+  final RatingDimension dimension;
+  final double? value;
+  final ValueChanged<double> onChanged;
+
+  const _RatingRow({
+    required this.dimension,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Text(dimension.emoji, style: const TextStyle(fontSize: 17)),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 52,
+            child: Text(
+              dimension.label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E)),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(5, (i) {
+                final level = (i + 1).toDouble();
+                final isSelected = value == level;
+                return GestureDetector(
+                  onTap: () => onChanged(level),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.primary : const Color(0xFFF0EDE8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 48,
+            child: Text(
+              value != null ? dimension.labelFor(value!) : '—',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: value != null ? _levelColor(value!) : const Color(0xFFCCCCCC),
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _levelColor(double val) {
+    if (val <= 1) return const Color(0xFF16A34A);
+    if (val <= 2) return const Color(0xFF65A30D);
+    if (val == 3) return const Color(0xFFCA8A04);
+    if (val == 4) return const Color(0xFFEA580C);
+    return const Color(0xFFDC2626);
   }
 }
 

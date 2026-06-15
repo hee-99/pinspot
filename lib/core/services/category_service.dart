@@ -4,8 +4,8 @@ class CategoryService {
   static const _key = 'user_categories';
 
   static const defaultCategories = [
-    '등산/명산', '조각상/공공예술', '사진 명소', '폐허/어반', '계곡/자연',
-    '⚠️ 위험 지역',
+    '등산/명산', '계곡/자연', '캠핑장', '맛집', '관광명소',
+    '사진 명소', '폐허/어반', '조각상/공공예술', '⚠️ 위험 지역',
   ];
 
   static Future<List<String>> getCategories() async {

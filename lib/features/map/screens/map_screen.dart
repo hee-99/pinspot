@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/models/pin_model.dart';
+import '../../../core/models/pin_rating_schema.dart';
 import '../../../core/services/directions_service.dart';
 import '../../../core/services/category_service.dart';
 import '../../../core/services/pin_service.dart';
@@ -73,36 +74,59 @@ class _MapScreenState extends State<MapScreen> {
     _DangerZone(LatLng(35.1796, 129.0756), '부산 해운대 이안류', '이안류 발생 구간. 해수욕 금지 구역.', '🌊'),
   ];
 
-  Set<Marker> get _markers {
-    var staticList = _selectedCategory == '전체'
+  double _categoryHue(String category) {
+    if (category.contains('위험')) return BitmapDescriptor.hueRed;
+    if (category.contains('맛집')) return 30.0;
+    if (category.contains('캠핑')) return BitmapDescriptor.hueCyan;
+    if (category.contains('사진')) return BitmapDescriptor.hueAzure;
+    if (category.contains('폐허') || category.contains('어반')) return BitmapDescriptor.hueViolet;
+    if (category.contains('관광') || category.contains('조각')) return BitmapDescriptor.hueYellow;
+    return BitmapDescriptor.hueGreen;
+  }
+
+  List<_Pin> get _filteredStaticPins {
+    var list = _selectedCategory == '전체'
         ? _pins
         : _pins.where((p) => p.category == _selectedCategory).toList();
-    var savedList = _selectedCategory == '전체'
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((p) =>
+        p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q),
+      ).toList();
+    }
+    return list;
+  }
+
+  List<PinModel> get _filteredSavedPins {
+    var list = _selectedCategory == '전체'
         ? _savedPins
         : _savedPins.where((p) => p.category == _selectedCategory).toList();
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      staticList = staticList.where((p) =>
-        p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q),
-      ).toList();
-      savedList = savedList.where((p) =>
+      list = list.where((p) =>
         p.title.toLowerCase().contains(q) || p.category.toLowerCase().contains(q),
       ).toList();
     }
+    return list;
+  }
+
+  int get _visiblePinCount => _filteredStaticPins.length + _filteredSavedPins.length;
+
+  Set<Marker> get _markers {
+    final staticList = _filteredStaticPins;
+    final savedList = _filteredSavedPins;
+
     final staticMarkers = staticList.map((pin) => Marker(
       markerId: MarkerId('static_${pin.name}'),
       position: pin.pos,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      icon: BitmapDescriptor.defaultMarkerWithHue(_categoryHue(pin.category)),
       onTap: () => _showPinSheet(pin),
     )).toSet();
     final savedMarkers = savedList.map((pin) {
-      final isDanger = pin.category.contains('위험');
       return Marker(
         markerId: MarkerId('saved_${pin.id}'),
         position: LatLng(pin.lat, pin.lng),
-        icon: isDanger
-            ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)
-            : (_markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)),
+        icon: _markerIcons[pin.id] ?? BitmapDescriptor.defaultMarkerWithHue(_categoryHue(pin.category)),
         onTap: () => _showSavedPinSheet(pin),
       );
     }).toSet();
@@ -252,17 +276,24 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _SavedPinBottomSheet(
-        pin: pin,
-        currentPos: _currentPos,
-        onNavigate: () {
-          Navigator.pop(context);
-          _startNavigation(LatLng(pin.lat, pin.lng), pin.title);
-        },
-        onShare: () {
-          Navigator.pop(context);
-          _sharePin(LatLng(pin.lat, pin.lng), pin.title, pin.category);
-        },
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize: 0.28,
+        maxChildSize: 0.88,
+        expand: false,
+        builder: (ctx, scrollCtrl) => _SavedPinBottomSheet(
+          pin: pin,
+          currentPos: _currentPos,
+          scrollController: scrollCtrl,
+          onNavigate: () {
+            Navigator.pop(context);
+            _startNavigation(LatLng(pin.lat, pin.lng), pin.title);
+          },
+          onShare: () {
+            Navigator.pop(context);
+            _sharePin(LatLng(pin.lat, pin.lng), pin.title, pin.category);
+          },
+        ),
       ),
     );
   }
@@ -379,92 +410,145 @@ class _MapScreenState extends State<MapScreen> {
             markers: _markers,
             polylines: _polylines,
           ),
-          // 상단 검색바
+          // ── 상단 패널: 검색바 + 카테고리 칩 ──
           Positioned(
             top: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4)),
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                    style: const TextStyle(fontSize: 15, color: AppColors.neutral900),
-                    decoration: InputDecoration(
-                      hintText: '장소, 카테고리 검색',
-                      hintStyle: const TextStyle(color: AppColors.neutral400, fontSize: 15),
-                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.neutral400, size: 20),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
-                              child: const Icon(Icons.close_rounded, color: AppColors.neutral400, size: 18),
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
-                      filled: false,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFF5F3EE),
+                    const Color(0xFFF5F3EE).withValues(alpha: 0.92),
+                    const Color(0xFFF5F3EE).withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.78, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 검색바 + 핀 카운트
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4)),
+                                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchCtrl,
+                                onChanged: (v) => setState(() => _searchQuery = v),
+                                style: const TextStyle(fontSize: 15, color: AppColors.neutral900),
+                                decoration: InputDecoration(
+                                  hintText: '장소, 카테고리 검색',
+                                  hintStyle: const TextStyle(color: AppColors.neutral400, fontSize: 15),
+                                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.neutral400, size: 20),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? GestureDetector(
+                                          onTap: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
+                                          child: const Icon(Icons.close_rounded, color: AppColors.neutral400, size: 18),
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+                                  filled: false,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 핀 카운트 뱃지 (필터 활성 시)
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: (_searchQuery.isNotEmpty || _selectedCategory != '전체')
+                                ? Padding(
+                                    key: const ValueKey('badge'),
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Container(
+                                      height: 48,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.neutral900,
+                                        borderRadius: BorderRadius.circular(14),
+                                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 3))],
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.location_on, size: 13, color: AppColors.primary),
+                                          const SizedBox(height: 1),
+                                          Text('$_visiblePinCount',
+                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox(key: ValueKey('empty')),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    // 카테고리 칩 (길찾기 중 숨김)
+                    if (!_isNavigating && !_navLoading)
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Row(
+                          children: ['전체', ..._categories].map((label) {
+                            final sel = _selectedCategory == label;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedCategory = label),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: sel ? const Color(0xFF1C1C1E) : AppColors.surface,
+                                    borderRadius: BorderRadius.circular(22),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: sel
+                                            ? Colors.black.withValues(alpha: 0.25)
+                                            : Colors.black.withValues(alpha: 0.08),
+                                        blurRadius: sel ? 8 : 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                                      color: sel ? Colors.white : AppColors.neutral600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
           ),
-          // 카테고리 칩 (길찾기 중에는 숨김)
-          if (!_isNavigating && !_navLoading)
-            Positioned(
-              bottom: 90, left: 0, right: 0,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: ['전체', ..._categories].map((label) {
-                    final sel = _selectedCategory == label;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedCategory = label),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 160),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: sel ? const Color(0xFF1C1C1E) : AppColors.surface,
-                            borderRadius: BorderRadius.circular(22),
-                            boxShadow: [
-                              BoxShadow(
-                                color: sel
-                                    ? Colors.black.withValues(alpha: 0.25)
-                                    : Colors.black.withValues(alpha: 0.10),
-                                blurRadius: sel ? 8 : 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                              color: sel ? Colors.white : AppColors.neutral600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
           // 경로 탐색 중 로딩
           if (_navLoading)
             Positioned(
@@ -824,12 +908,14 @@ class _SavedPinBottomSheet extends StatelessWidget {
   final LatLng? currentPos;
   final VoidCallback onNavigate;
   final VoidCallback onShare;
+  final ScrollController scrollController;
 
   const _SavedPinBottomSheet({
     required this.pin,
     required this.currentPos,
     required this.onNavigate,
     required this.onShare,
+    required this.scrollController,
   });
 
   String? get _distanceLabel {
@@ -844,134 +930,233 @@ class _SavedPinBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dist = _distanceLabel;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16, right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4))],
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (pin.photoPath != null && !kIsWeb)
-              ClipRRect(
-                borderRadius: BorderRadius.zero,
-                child: Image.file(
-                  File(pin.photoPath!),
-                  width: double.infinity,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 14),
-                decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
-              ),
+      clipBehavior: Clip.antiAlias,
+      child: ListView(
+        controller: scrollController,
+        padding: EdgeInsets.zero,
+        children: [
+          // 드래그 핸들
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          // 히어로 사진
+          if (pin.photoPath != null && !kIsWeb)
+            Image.file(
+              File(pin.photoPath!),
+              width: double.infinity,
+              height: 190,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          // 현재 위치 거리 배너
+          if (dist != null)
+            Container(
+              color: AppColors.primary.withValues(alpha: 0.07),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46, height: 46,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(pin.title,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
-                            const SizedBox(height: 5),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(pin.category,
-                                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                                ),
-                                if (dist != null) ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.near_me_rounded, size: 12, color: AppColors.neutral400),
-                                  const SizedBox(width: 3),
-                                  Text(dist, style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (pin.description.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(pin.description,
-                        style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.55),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: onNavigate,
-                          icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
-                          label: const Text('길찾기',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 50, height: 50,
-                        decoration: BoxDecoration(
-                          color: AppColors.neutral100,
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: IconButton(
-                          onPressed: onShare,
-                          icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
-                          tooltip: '공유',
-                        ),
-                      ),
-                    ],
+                  const Icon(Icons.near_me_rounded, size: 13, color: AppColors.primary),
+                  const SizedBox(width: 5),
+                  Text(
+                    '현재 위치에서 $dist',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                   ),
                 ],
               ),
             ),
+          // 핀 정보
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 제목 + 카테고리 배지
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(pin.title,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.neutral900)),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(pin.category,
+                                style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                // 설명 (전체 표시, 줄임 없음)
+                if (pin.description.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(pin.description,
+                      style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.6)),
+                ],
+                // 등급 정보
+                if (pin.ratings != null && pin.ratings!.isNotEmpty)
+                  _PinRatingsDisplay(ratings: pin.ratings!, category: pin.category),
+                const SizedBox(height: 20),
+                // 액션 버튼
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onNavigate,
+                        icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
+                        label: const Text('길찾기',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 52, height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral100,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: IconButton(
+                        onPressed: onShare,
+                        icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
+                        tooltip: '공유',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 핀 등급 표시 위젯
+// ──────────────────────────────────────────────
+class _PinRatingsDisplay extends StatelessWidget {
+  final Map<String, double> ratings;
+  final String category;
+
+  const _PinRatingsDisplay({required this.ratings, required this.category});
+
+  Color _levelColor(double val) {
+    if (val <= 1) return const Color(0xFF16A34A);
+    if (val <= 2) return const Color(0xFF65A30D);
+    if (val == 3) return const Color(0xFFCA8A04);
+    if (val == 4) return const Color(0xFFEA580C);
+    return const Color(0xFFDC2626);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dims = PinRatingSchema.forCategory(category);
+    final relevant = dims.where((d) => ratings.containsKey(d.key)).toList();
+    if (relevant.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 14),
+        const Divider(height: 1, color: Color(0xFFF0EDE8)),
+        const SizedBox(height: 14),
+        Row(
+          children: const [
+            Icon(Icons.bar_chart_rounded, size: 14, color: AppColors.primary),
+            SizedBox(width: 5),
+            Text('등급 정보',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+        ...relevant.map((dim) {
+          final val = ratings[dim.key]!;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Text(dim.emoji, style: const TextStyle(fontSize: 15)),
+                const SizedBox(width: 5),
+                SizedBox(
+                  width: 48,
+                  child: Text(dim.label,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.neutral600)),
+                ),
+                Expanded(
+                  child: Row(
+                    children: List.generate(5, (i) {
+                      final level = i + 1;
+                      final isSelected = val == level.toDouble();
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Container(
+                          width: 26, height: 26,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary : AppColors.neutral100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$level',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected ? Colors.white : AppColors.neutral400,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                Text(
+                  dim.labelFor(val),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _levelColor(val),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

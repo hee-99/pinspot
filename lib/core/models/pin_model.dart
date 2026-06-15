@@ -7,6 +7,7 @@ class PinModel {
   final double lng;
   final String? photoPath;
   final DateTime createdAt;
+  final Map<String, double>? ratings;
 
   const PinModel({
     required this.id,
@@ -17,6 +18,7 @@ class PinModel {
     required this.lng,
     this.photoPath,
     required this.createdAt,
+    this.ratings,
   });
 
   Map<String, dynamic> toJson() => {
@@ -28,6 +30,7 @@ class PinModel {
     'lng': lng,
     'photoPath': photoPath,
     'createdAt': createdAt.toIso8601String(),
+    if (ratings != null) 'ratings': ratings,
   };
 
   factory PinModel.fromJson(Map<String, dynamic> j) => PinModel(
@@ -39,5 +42,9 @@ class PinModel {
     lng: (j['lng'] as num).toDouble(),
     photoPath: j['photoPath'] as String?,
     createdAt: DateTime.parse(j['createdAt'] as String),
+    ratings: j['ratings'] != null
+        ? Map<String, double>.from(
+            (j['ratings'] as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())))
+        : null,
   );
 }
