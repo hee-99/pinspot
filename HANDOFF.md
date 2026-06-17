@@ -1,10 +1,23 @@
 # Pinspot — HANDOFF.md
 
-> 마지막 업데이트: 2026-06-08
+> 마지막 업데이트: 2026-06-17
 
 ---
 
-## 오늘 완료한 작업 (2026-06-08)
+## 오늘 완료한 작업 (2026-06-17)
+
+| 작업 | 상태 |
+|------|------|
+| 샘플 핀 26개 시딩 (서울 전역 — 등산/계곡/캠핑/맛집/관광/사진명소/폐허) | ✅ |
+| 앱 아이콘 교체 — PINSPOT_icon_green (Emerald #17B96A, 귀여운 핀 캐릭터) | ✅ |
+| Android adaptive icon — mipmap-*/ic_launcher_foreground.png + @color/ic_launcher_background #17B96A | ✅ |
+| iOS AppIcon.appiconset — 모든 사이즈 PNG 교체 (20~1024px) | ✅ |
+| Android 12 시스템 스플래시 — 다크 배경 (#091408) + 새 아이콘 | ✅ |
+| Flutter 스플래시 — 핀 캐릭터 바운스+스쿼시 애니메이션 + 로딩바 | ✅ |
+
+---
+
+## 이전 완료한 작업 (2026-06-08)
 
 | 작업 | 커밋 |
 |------|------|
