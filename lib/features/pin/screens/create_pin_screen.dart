@@ -15,6 +15,8 @@ import '../../../core/services/category_service.dart';
 import '../../../core/services/community_service.dart';
 import '../../../core/services/landmark_info_service.dart';
 import '../../../core/services/pin_service.dart';
+import '../../tigo/services/tigo_service.dart';
+import '../../tigo/widgets/tigo_unlock_dialog.dart';
 
 enum _FailReason { none, gps, exif, distance }
 
@@ -212,8 +214,21 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 
     await PinService.savePin(pin);
     PinRefreshNotifier.instance.notifyPinAdded();
+    final newItems = await TigoService.instance.incrementUploadCount();
 
-    if (mounted) setState(() { _isSubmitting = false; _savedPin = pin; _step = 3; });
+    if (mounted) {
+      setState(() { _isSubmitting = false; _savedPin = pin; _step = 3; });
+      if (newItems.isNotEmpty) {
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (_) => TigoUnlockDialog(items: newItems),
+            );
+          }
+        });
+      }
+    }
   }
 
   Future<void> _shareToCommunities(List<String> communityIds) async {

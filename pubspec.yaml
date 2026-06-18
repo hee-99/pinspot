@@ -62,10 +62,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/tigo/app_icon_master.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#16A34A"
-  adaptive_icon_foreground: "assets/icon_fg.png"
+  adaptive_icon_background: "#F5E9D6"
+  adaptive_icon_foreground: "assets/tigo/app_icon_master.png"
   web:
     generate: false
 
@@ -79,6 +79,11 @@ flutter:
 
   assets:
     - assets/map_style.json
+    - assets/tigo/base/
+    - assets/tigo/items/
+    - assets/tigo/pin/
+    - assets/tigo/friend/
+    - assets/tigo/logo/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

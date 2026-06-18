@@ -224,13 +224,13 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                       const SizedBox(height: 6),
 
-                      // ── "기록이 된다" ──────────────────────────────────────────
+                      // ── "지도가 된다" ──────────────────────────────────────────
                       Opacity(
                         opacity: _line2Fade.value,
                         child: Transform.translate(
                           offset: Offset(0, (1 - _line2Fade.value) * 22),
                           child: const Text(
-                            '기록이 된다',
+                            '지도가 된다',
                             style: TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.w800,
@@ -262,12 +262,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 ),
                                 const SizedBox(width: 14),
                                 Text(
-                                  'PINSPOT',
+                                  'TIGO',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary.withValues(alpha: 0.65),
-                                    letterSpacing: 6,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary.withValues(alpha: 0.85),
+                                    letterSpacing: 8,
                                   ),
                                 ),
                                 const SizedBox(width: 14),
@@ -359,7 +359,7 @@ class _PinIconPainter extends CustomPainter {
 
     // ── 미소 ─────────────────────────────────────────────
     final smilePaint = Paint()
-      ..color = const Color(0xFF12642A).withValues(alpha: 0.85)
+      ..color = AppColors.tigoBrown.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.018
       ..strokeCap = StrokeCap.round;

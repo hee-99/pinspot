@@ -6,6 +6,9 @@ import '../../map/screens/map_screen.dart';
 import '../../community/screens/community_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../pin/screens/create_pin_screen.dart';
+import '../../tigo/services/tigo_service.dart';
+import '../../tigo/widgets/tigo_unlock_dialog.dart';
+import 'home_content_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,19 +18,35 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 1; // 기본: 지도
+  int _currentIndex = 0; // 기본: 도감(홈)
 
   static const _screens = [
-    SizedBox.shrink(), // Pin → CreatePinScreen 모달
-    MapScreen(),
-    CommunityScreen(),
-    ProfileScreen(),
+    HomeContentScreen(), // 0: 도감 (홈)
+    MapScreen(),         // 1: 지도
+    SizedBox.shrink(),   // 2: 카메라 → CreatePinScreen 모달
+    CommunityScreen(),   // 3: 앨범
+    ProfileScreen(),     // 4: 마이페이지
   ];
 
   @override
   void initState() {
     super.initState();
     _checkPrivacyNotice();
+    TigoService.instance.addListener(_onTigoUpdate);
+  }
+
+  void _onTigoUpdate() {
+    final newItems = TigoService.instance.consumePendingUnlock();
+    if (newItems.isNotEmpty && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => TigoUnlockDialog(items: newItems),
+          );
+        }
+      });
+    }
   }
 
   Future<void> _checkPrivacyNotice() async {
@@ -54,8 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    TigoService.instance.removeListener(_onTigoUpdate);
+    super.dispose();
+  }
+
   void _onTabTapped(int index) {
-    if (index == 0) {
+    if (index == 2) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const CreatePinScreen()),
       );
@@ -77,52 +102,56 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── Bottom Navigation (4탭) ───────────────────────────────────────────────────
+// ── Bottom Navigation (5탭: 도감·지도·카메라·앨범·마이페이지) ───────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
 
+  static const _orange = Color(0xFFFF8A00);
+
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.neutral200, width: 0.8)),
+        border: const Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 0.8)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60,
+          height: 64,
           child: Row(
             children: [
-              // 핀 버튼 (왼쪽 첫 번째)
+              _NavItem(icon: Icons.book_outlined,      activeIcon: Icons.book,      label: '도감',     index: 0, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.map_outlined,        activeIcon: Icons.map,       label: '지도',     index: 1, current: currentIndex, onTap: onTap),
+              // 중앙 카메라 FAB
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(0),
+                  onTap: () => onTap(2),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 48, height: 34,
+                        width: 52, height: 52,
+                        margin: const EdgeInsets.only(bottom: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(17),
-                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                          color: _orange,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: _orange.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 5)),
+                          ],
                         ),
-                        child: const Icon(Icons.add_location_alt_rounded, color: Colors.white, size: 20),
+                        child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 26),
                       ),
-                      const SizedBox(height: 3),
-                      Text(l.navPin, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary)),
                     ],
                   ),
                 ),
               ),
-              _NavItem(icon: Icons.map_outlined, activeIcon: Icons.map, label: l.navMap, index: 1, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.groups_outlined, activeIcon: Icons.groups, label: l.navCommunity, index: 2, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline, activeIcon: Icons.person, label: l.navProfile, index: 3, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.grid_view_outlined,  activeIcon: Icons.grid_view, label: '앨범',     index: 3, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline,      activeIcon: Icons.person,    label: '마이페이지', index: 4, current: currentIndex, onTap: onTap),
             ],
           ),
         ),
@@ -138,6 +167,9 @@ class _NavItem extends StatelessWidget {
   final ValueChanged<int> onTap;
   const _NavItem({required this.icon, required this.activeIcon, required this.label, required this.index, required this.current, required this.onTap});
 
+  static const _orange   = Color(0xFFFF8A00);
+  static const _inactive = Color(0xFFAAAAAA);
+
   @override
   Widget build(BuildContext context) {
     final active = current == index;
@@ -148,20 +180,20 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: active ? 18 : 0, height: 3,
-              margin: const EdgeInsets.only(bottom: 5),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
-            ),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: Icon(active ? activeIcon : icon, key: ValueKey(active),
-                  color: active ? AppColors.primary : AppColors.neutral400, size: 22),
+              duration: const Duration(milliseconds: 150),
+              child: Icon(active ? activeIcon : icon,
+                  key: ValueKey(active),
+                  color: active ? _orange : _inactive,
+                  size: 22),
             ),
             const SizedBox(height: 3),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active ? AppColors.primary : AppColors.neutral400)),
+            Text(label,
+                style: TextStyle(
+                  fontSize: label.length > 4 ? 9 : 10,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                  color: active ? _orange : _inactive,
+                )),
           ],
         ),
       ),

@@ -12,7 +12,10 @@ import '../../../core/models/pin_rating_schema.dart';
 import '../../../core/services/directions_service.dart';
 import '../../../core/services/category_service.dart';
 import '../../../core/services/pin_service.dart';
+import '../../../core/theme/tigo_colors.dart';
 import '../../../core/utils/marker_builder.dart';
+import '../../tigo/models/tigo_model.dart';
+import '../../tigo/services/tigo_service.dart';
 
 class _Pin {
   final LatLng pos;
@@ -53,6 +56,7 @@ class _MapScreenState extends State<MapScreen> {
   String? _navDestName;
   List<PinModel> _savedPins = [];
   Map<String, BitmapDescriptor> _markerIcons = {};
+  TravelStats? _travelStats;
 
   static const _defaultPos = LatLng(37.5665, 126.9780);
 
@@ -160,16 +164,16 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _loadSavedPins() async {
     final pins = await PinService.getPins();
     if (!mounted) return;
+    final footprintMarker = await MarkerBuilder.buildFootprintMarker();
     final Map<String, BitmapDescriptor> icons = {};
     for (final pin in pins) {
-      if (pin.photoPath != null) {
-        icons[pin.id] = await MarkerBuilder.buildPhotoMarker(pin.photoPath!);
-      }
+      icons[pin.id] = footprintMarker;
     }
     if (!mounted) return;
     setState(() {
       _savedPins = pins;
       _markerIcons = icons;
+      _travelStats = TigoService.computeStats(pins);
     });
   }
 
@@ -608,6 +612,42 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+          // ── "나의 발톱 자국" 칩 ──
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3))],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🐾', style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 5),
+                        Text('나의 발톱 자국',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: TigoColors.brown)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // ── 하단 통계 카드 ──
+          if (_travelStats != null)
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: _MapStatsCard(stats: _travelStats!),
+            ),
           // 위치 에러 배너 (탭하면 재시도)
           if (_locationError != null && !_locationLoading)
             Positioned(
@@ -639,6 +679,61 @@ class _MapScreenState extends State<MapScreen> {
         ],
       ),
     );
+  }
+}
+
+// ── 하단 통계 카드 ──────────────────────────────────────────────────────────
+class _MapStatsCard extends StatelessWidget {
+  final TravelStats stats;
+  const _MapStatsCard({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 16, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          _StatItem(label: '방문한 도시', value: '${stats.visitedCities}'),
+          _Divider(),
+          _StatItem(label: '남긴 발톱 자국', value: '${stats.footprints}'),
+          _Divider(),
+          _StatItem(label: '촬영한 사진', value: '${stats.photos}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label, value;
+  const _StatItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFFFF8A00))),
+          const SizedBox(height: 3),
+          Text(label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF9E9E9E))),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 32, color: const Color(0xFFEEEEEE));
   }
 }
 

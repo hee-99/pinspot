@@ -135,6 +135,56 @@ class MarkerBuilder {
     return result;
   }
 
+  /// Draws a TIGO footprint marker: orange circle with 3 white claw slashes.
+  static Future<BitmapDescriptor> buildFootprintMarker({
+    ui.Color color = const ui.Color(0xFFFF8A00),
+  }) async {
+    if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(30);
+
+    const double cs = 60.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+
+    // Orange circle background
+    canvas.drawCircle(
+      const ui.Offset(cs / 2, cs / 2),
+      cs / 2,
+      ui.Paint()..color = color..isAntiAlias = true,
+    );
+    // White inner ring
+    canvas.drawCircle(
+      const ui.Offset(cs / 2, cs / 2),
+      cs / 2 - 3,
+      ui.Paint()
+        ..color = const ui.Color(0x33FFFFFF)
+        ..isAntiAlias = true,
+    );
+
+    // 3 claw slashes (diagonal, top-right → bottom-left direction)
+    final clawPaint = ui.Paint()
+      ..color = const ui.Color(0xFFFFFFFF)
+      ..strokeWidth = 3.5
+      ..strokeCap = ui.StrokeCap.round
+      ..style = ui.PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    final slashOffsets = [-9.0, 0.0, 9.0];
+    for (final dx in slashOffsets) {
+      final cx = cs / 2 + dx;
+      canvas.drawLine(
+        ui.Offset(cx + 7, 13),
+        ui.Offset(cx - 7, cs - 13),
+        clawPaint,
+      );
+    }
+
+    final picture = recorder.endRecording();
+    final result = await picture.toImage(cs.toInt(), cs.toInt());
+    final data = await result.toByteData(format: ui.ImageByteFormat.png);
+    if (data == null) return BitmapDescriptor.defaultMarkerWithHue(30);
+    return BitmapDescriptor.bytes(data.buffer.asUint8List());
+  }
+
   static double _haversine(double lat1, double lng1, double lat2, double lng2) {
     const r = 6371000.0;
     final a = lat1 * (math.pi / 180);

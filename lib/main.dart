@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'core/services/landmark_info_service.dart';
 import 'core/services/locale_service.dart';
 import 'core/services/sample_data_service.dart';
+import 'features/tigo/services/tigo_service.dart';
 import 'features/auth/screens/splash_screen.dart';
 
 const String _kakaoAppKey = String.fromEnvironment('KAKAO_APP_KEY');
@@ -14,6 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(nativeAppKey: _kakaoAppKey);
   await LocaleService.init();
+  await TigoService.instance.load();
   await SampleDataService.seedIfEmpty();
   LandmarkInfoService.refreshStaleCacheInBackground().ignore();
   runApp(const PinspotApp());
