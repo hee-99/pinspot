@@ -8,7 +8,6 @@ import '../../profile/screens/profile_screen.dart';
 import '../../pin/screens/create_pin_screen.dart';
 import '../../tigo/services/tigo_service.dart';
 import '../../tigo/widgets/tigo_unlock_dialog.dart';
-import 'home_content_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,14 +17,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0; // 기본: 도감(홈)
+  // 0: 카메라(modal), 1: 지도, 2: 커뮤니티, 3: 프로필
+  int _currentIndex = 1; // 기본: 지도
 
   static const _screens = [
-    HomeContentScreen(), // 0: 도감 (홈)
-    MapScreen(),         // 1: 지도
-    SizedBox.shrink(),   // 2: 카메라 → CreatePinScreen 모달
-    CommunityScreen(),   // 3: 앨범
-    ProfileScreen(),     // 4: 마이페이지
+    SizedBox.shrink(),  // 0: 카메라 → modal
+    MapScreen(),        // 1: 지도
+    CommunityScreen(),  // 2: 커뮤니티
+    ProfileScreen(),    // 3: 프로필
   ];
 
   @override
@@ -80,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 2) {
+    if (index == 0) {
+      // 카메라: 모달로 열기, 현재 탭 유지
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const CreatePinScreen()),
       );
@@ -102,13 +102,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── Bottom Navigation (5탭: 도감·지도·카메라·앨범·마이페이지) ───────────────────────
+// ── Bottom Navigation (4탭: 카메라·지도·커뮤니티·프로필) ──────────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
 
-  static const _orange = Color(0xFFFF8A00);
+  static const _orange   = Color(0xFFFF8A00);
+  static const _inactive = Color(0xFFAAAAAA);
 
   @override
   Widget build(BuildContext context) {
@@ -124,34 +125,32 @@ class _BottomNav extends StatelessWidget {
           height: 64,
           child: Row(
             children: [
-              _NavItem(icon: Icons.book_outlined,      activeIcon: Icons.book,      label: '도감',     index: 0, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.map_outlined,        activeIcon: Icons.map,       label: '지도',     index: 1, current: currentIndex, onTap: onTap),
-              // 중앙 카메라 FAB
+              // 카메라 탭 (특별 스타일 — 항상 orange circle)
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(2),
+                  onTap: () => onTap(0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 52, height: 52,
-                        margin: const EdgeInsets.only(bottom: 2),
+                        width: 44, height: 44,
                         decoration: BoxDecoration(
                           color: _orange,
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(color: _orange.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 5)),
+                            BoxShadow(color: _orange.withValues(alpha: 0.40), blurRadius: 12, offset: const Offset(0, 4)),
                           ],
                         ),
-                        child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 26),
+                        child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 22),
                       ),
                     ],
                   ),
                 ),
               ),
-              _NavItem(icon: Icons.grid_view_outlined,  activeIcon: Icons.grid_view, label: '앨범',     index: 3, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline,      activeIcon: Icons.person,    label: '마이페이지', index: 4, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.map_outlined,        activeIcon: Icons.map,        label: '지도',    index: 1, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.people_outline,      activeIcon: Icons.people,     label: '커뮤니티', index: 2, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline,      activeIcon: Icons.person,     label: '프로필',  index: 3, current: currentIndex, onTap: onTap),
             ],
           ),
         ),
@@ -185,12 +184,12 @@ class _NavItem extends StatelessWidget {
               child: Icon(active ? activeIcon : icon,
                   key: ValueKey(active),
                   color: active ? _orange : _inactive,
-                  size: 22),
+                  size: 24),
             ),
             const SizedBox(height: 3),
             Text(label,
                 style: TextStyle(
-                  fontSize: label.length > 4 ? 9 : 10,
+                  fontSize: 10,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                   color: active ? _orange : _inactive,
                 )),

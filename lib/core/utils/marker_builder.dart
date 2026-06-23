@@ -5,104 +5,137 @@ import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MarkerBuilder {
-  static const double _size = 90.0;
-
-  static Future<BitmapDescriptor> buildPhotoMarker(String imagePath) =>
-      buildClusterMarker(imagePath, 1);
-
-  /// Builds a circular photo marker.
-  /// If [count] > 1, draws a count badge ("N명") below the circle.
-  static Future<BitmapDescriptor> buildClusterMarker(
-    String? imagePath,
-    int count, {
-    ui.Color accent = const ui.Color(0xFF16A34A),
-  }) async {
+  // 사진 핀 마커: 둥근 사각형 사진 + 아래 꼭지 (위치핀 형태)
+  static Future<BitmapDescriptor> buildPhotoMarker(String imagePath) async {
     if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
 
-    const double cs = _size;
-    const double badgeH = 22.0;
-    const double gap = 3.0;
-    final bool showBadge = count > 1;
-    final double totalH = showBadge ? cs + gap + badgeH : cs;
+    const double sz     = 100.0;  // 사각형 크기
+    const double radius = 14.0;   // 모서리 반경
+    const double tip    = 16.0;   // 꼭지 높이
+    const double border = 3.5;    // 흰 테두리 두께
+    const double totalH = sz + tip;
+    const double w      = sz;
 
     ui.Image? photo;
-    if (imagePath != null) {
-      try {
-        final bytes = await File(imagePath).readAsBytes();
-        final codec = await ui.instantiateImageCodec(bytes, targetWidth: 80, targetHeight: 80);
-        final frame = await codec.getNextFrame();
-        photo = frame.image;
-      } catch (_) {}
-    }
+    try {
+      final bytes = await File(imagePath).readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 100, targetHeight: 100);
+      final frame = await codec.getNextFrame();
+      photo = frame.image;
+    } catch (_) {}
 
     final recorder = ui.PictureRecorder();
-    final canvas = ui.Canvas(recorder);
+    final canvas   = ui.Canvas(recorder);
 
-    // Outer accent ring
-    canvas.drawCircle(
-      ui.Offset(cs / 2, cs / 2),
-      cs / 2,
-      ui.Paint()..color = accent..isAntiAlias = true,
-    );
-    // White inner ring
-    canvas.drawCircle(
-      ui.Offset(cs / 2, cs / 2),
-      cs / 2 - 3,
-      ui.Paint()..color = const ui.Color(0xFFFFFFFF)..isAntiAlias = true,
-    );
+    // 그림자
+    final shadowPaint = ui.Paint()
+      ..color = const ui.Color(0x44000000)
+      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 4);
+    _drawPinShape(canvas, w, sz, tip, radius, shadowPaint, offsetY: 3);
+
+    // 흰 테두리
+    final borderPaint = ui.Paint()..color = const ui.Color(0xFFFFFFFF);
+    _drawPinShape(canvas, w, sz, tip, radius, borderPaint);
+
+    // 사진 클립
+    canvas.save();
+    final clipPath = _pinPath(w, sz, tip, radius - border + 1,
+        insetX: border, insetY: border);
+    canvas.clipPath(clipPath);
 
     if (photo != null) {
-      canvas.save();
-      canvas.clipPath(
-        ui.Path()..addOval(
-          ui.Rect.fromCircle(center: ui.Offset(cs / 2, cs / 2), radius: cs / 2 - 5),
-        ),
-      );
       canvas.drawImageRect(
         photo,
         ui.Rect.fromLTWH(0, 0, photo.width.toDouble(), photo.height.toDouble()),
-        ui.Rect.fromLTWH(5, 5, cs - 10, cs - 10),
+        ui.Rect.fromLTWH(border, border, w - border * 2, sz - border * 2),
         ui.Paint()..isAntiAlias = true,
       );
-      canvas.restore();
-    }
-
-    if (showBadge) {
-      final label = '$count명';
-      final badgeY = cs + gap;
-
-      final pb = ui.ParagraphBuilder(
-        ui.ParagraphStyle(textAlign: ui.TextAlign.center, fontSize: 11),
-      )
-        ..pushStyle(ui.TextStyle(
-          color: const ui.Color(0xFFFFFFFF),
-          fontSize: 11,
-          fontWeight: ui.FontWeight.w700,
-        ))
-        ..addText(label);
-      final para = pb.build()
-        ..layout(ui.ParagraphConstraints(width: cs));
-
-      final textW = math.min(para.maxIntrinsicWidth + 18, cs);
-      final badgeX = (cs - textW) / 2;
-
-      canvas.drawRRect(
-        ui.RRect.fromRectAndRadius(
-          ui.Rect.fromLTWH(badgeX, badgeY, textW, badgeH),
-          const ui.Radius.circular(11),
-        ),
-        ui.Paint()..color = accent..isAntiAlias = true,
-      );
-      canvas.drawParagraph(
-        para,
-        ui.Offset(badgeX + (textW - para.maxIntrinsicWidth) / 2, badgeY + (badgeH - 13) / 2),
+    } else {
+      // 사진 없을 때 주황 배경 + 카메라 아이콘
+      canvas.drawRect(
+        ui.Rect.fromLTWH(border, border, w - border * 2, sz - border * 2),
+        ui.Paint()..color = const ui.Color(0xFFFF8A00),
       );
     }
+    canvas.restore();
 
     final picture = recorder.endRecording();
-    final result = await picture.toImage(cs.toInt(), totalH.toInt());
-    final data = await result.toByteData(format: ui.ImageByteFormat.png);
+    final img  = await picture.toImage(w.toInt(), totalH.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
     if (data == null) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    return BitmapDescriptor.bytes(data.buffer.asUint8List());
+  }
+
+  static void _drawPinShape(
+    ui.Canvas canvas, double w, double sz, double tip, double r,
+    ui.Paint paint, {double offsetY = 0}
+  ) {
+    final path = _pinPath(w, sz, tip, r, offsetY: offsetY);
+    canvas.drawPath(path, paint);
+  }
+
+  static ui.Path _pinPath(
+    double w, double sz, double tip, double r, {
+    double insetX = 0, double insetY = 0, double offsetY = 0,
+  }) {
+    final left   = insetX;
+    final top    = insetY + offsetY;
+    final right  = w - insetX;
+    final bottom = sz - insetY + offsetY;
+    final mid    = w / 2;
+
+    return ui.Path()
+      ..moveTo(left + r, top)
+      ..lineTo(right - r, top)
+      ..arcToPoint(ui.Offset(right, top + r),
+          radius: ui.Radius.circular(r))
+      ..lineTo(right, bottom - r)
+      ..arcToPoint(ui.Offset(right - r, bottom),
+          radius: ui.Radius.circular(r))
+      ..lineTo(mid + 10, bottom)
+      ..lineTo(mid, bottom + tip - insetY)   // 꼭지 끝
+      ..lineTo(mid - 10, bottom)
+      ..lineTo(left + r, bottom)
+      ..arcToPoint(ui.Offset(left, bottom - r),
+          radius: ui.Radius.circular(r))
+      ..lineTo(left, top + r)
+      ..arcToPoint(ui.Offset(left + r, top),
+          radius: ui.Radius.circular(r))
+      ..close();
+  }
+
+  /// 클러스터 마커 (여러 핀 묶음)
+  static Future<BitmapDescriptor> buildClusterMarker(
+    String? imagePath,
+    int count, {
+    ui.Color accent = const ui.Color(0xFFFF8A00),
+  }) async {
+    if (count == 1 && imagePath != null) return buildPhotoMarker(imagePath);
+    if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(30);
+
+    const double cs = 80.0;
+    final recorder = ui.PictureRecorder();
+    final canvas   = ui.Canvas(recorder);
+
+    canvas.drawCircle(ui.Offset(cs / 2, cs / 2), cs / 2,
+        ui.Paint()..color = accent..isAntiAlias = true);
+    canvas.drawCircle(ui.Offset(cs / 2, cs / 2), cs / 2 - 4,
+        ui.Paint()..color = const ui.Color(0xFFFFFFFF)..isAntiAlias = true);
+
+    final pb = ui.ParagraphBuilder(
+      ui.ParagraphStyle(textAlign: ui.TextAlign.center, fontSize: 20),
+    )
+      ..pushStyle(ui.TextStyle(
+        color: accent, fontSize: 20, fontWeight: ui.FontWeight.w900,
+      ))
+      ..addText('$count');
+    final para = pb.build()..layout(ui.ParagraphConstraints(width: cs));
+    canvas.drawParagraph(para, ui.Offset(0, (cs - 24) / 2));
+
+    final picture = recorder.endRecording();
+    final img  = await picture.toImage(cs.toInt(), cs.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    if (data == null) return BitmapDescriptor.defaultMarkerWithHue(30);
     return BitmapDescriptor.bytes(data.buffer.asUint8List());
   }
 

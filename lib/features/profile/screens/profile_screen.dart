@@ -16,6 +16,8 @@ import '../../../core/services/pin_service.dart';
 import '../../../core/utils/marker_builder.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../settings/screens/language_test_screen.dart';
+import '../../tigo/screens/tigo_closet_screen.dart';
+import '../../home/screens/home_content_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -365,6 +367,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           SliverToBoxAdapter(
             child: _ProfileHeader(user: _user, pinCount: _pins.length),
           ),
+          SliverToBoxAdapter(
+            child: _TigoQuickAccess(),
+          ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabBarDelegate(tabController: _tabController),
@@ -650,6 +655,87 @@ class _StatChip extends StatelessWidget {
   }
 }
 
+
+// ─── 티고 바로가기 (도감 · 꾸미기) ────────────────────────────────────────────────
+
+class _TigoQuickAccess extends StatelessWidget {
+  const _TigoQuickAccess();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _kCard,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Row(
+        children: [
+          _QuickCard(
+            icon: '📖',
+            label: '도감',
+            subtitle: '티고의 기록',
+            onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const HomeContentScreen())),
+          ),
+          const SizedBox(width: 10),
+          _QuickCard(
+            icon: '🐯',
+            label: '티고 꾸미기',
+            subtitle: '아이템 장착',
+            onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const TigoClosetScreen())),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickCard extends StatelessWidget {
+  final String icon, label, subtitle;
+  final VoidCallback onTap;
+  const _QuickCard({required this.icon, required this.label, required this.subtitle, required this.onTap});
+
+  static const _orange = Color(0xFFFF8A00);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: _kBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFEDE9E3), width: 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _kText1)),
+                    Text(subtitle, style: const TextStyle(fontSize: 10, color: _kText2)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 16, color: _kText3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // ─── 탭바 ──────────────────────────────────────────────────────────────────────
 

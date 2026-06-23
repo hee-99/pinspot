@@ -164,10 +164,18 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _loadSavedPins() async {
     final pins = await PinService.getPins();
     if (!mounted) return;
-    final footprintMarker = await MarkerBuilder.buildFootprintMarker();
     final Map<String, BitmapDescriptor> icons = {};
     for (final pin in pins) {
-      icons[pin.id] = footprintMarker;
+      final path = pin.photoPath;
+      if (path != null && path.isNotEmpty && !kIsWeb) {
+        try {
+          icons[pin.id] = await MarkerBuilder.buildPhotoMarker(path);
+        } catch (_) {
+          icons[pin.id] = await MarkerBuilder.buildFootprintMarker();
+        }
+      } else {
+        icons[pin.id] = await MarkerBuilder.buildFootprintMarker();
+      }
     }
     if (!mounted) return;
     setState(() {
