@@ -171,11 +171,10 @@ class _MapScreenState extends State<MapScreen> {
         try {
           icons[pin.id] = await MarkerBuilder.buildPhotoMarker(path);
         } catch (_) {
-          icons[pin.id] = await MarkerBuilder.buildFootprintMarker();
+          // 사진 로드 실패 시 기본 마커 사용 (발톱 없음)
         }
-      } else {
-        icons[pin.id] = await MarkerBuilder.buildFootprintMarker();
       }
+      // 사진 없는 핀은 _markers getter에서 기본 마커로 처리
     }
     if (!mounted) return;
     setState(() {
