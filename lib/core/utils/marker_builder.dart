@@ -5,21 +5,18 @@ import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MarkerBuilder {
-  // 사진 핀 마커: 둥근 사각형 사진 + 아래 꼭지 (위치핀 형태)
+  // 사진 마커: 발톱 크기와 동일한 정사각형 사진 썸네일 (흰 테두리 + 둥근 모서리)
   static Future<BitmapDescriptor> buildPhotoMarker(String imagePath) async {
     if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
 
-    const double sz     = 100.0;  // 사각형 크기
-    const double radius = 14.0;   // 모서리 반경
-    const double tip    = 16.0;   // 꼭지 높이
-    const double border = 3.5;    // 흰 테두리 두께
-    const double totalH = sz + tip;
-    const double w      = sz;
+    const double sz     = 64.0;
+    const double border = 3.0;
+    const double radius = 10.0;
 
     ui.Image? photo;
     try {
       final bytes = await File(imagePath).readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 100, targetHeight: 100);
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 64, targetHeight: 64);
       final frame = await codec.getNextFrame();
       photo = frame.image;
     } catch (_) {}
@@ -27,81 +24,43 @@ class MarkerBuilder {
     final recorder = ui.PictureRecorder();
     final canvas   = ui.Canvas(recorder);
 
-    // 그림자
-    final shadowPaint = ui.Paint()
-      ..color = const ui.Color(0x44000000)
-      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 4);
-    _drawPinShape(canvas, w, sz, tip, radius, shadowPaint, offsetY: 3);
-
     // 흰 테두리
-    final borderPaint = ui.Paint()..color = const ui.Color(0xFFFFFFFF);
-    _drawPinShape(canvas, w, sz, tip, radius, borderPaint);
+    canvas.drawRRect(
+      ui.RRect.fromRectAndRadius(
+        ui.Rect.fromLTWH(0, 0, sz, sz),
+        const ui.Radius.circular(radius),
+      ),
+      ui.Paint()..color = const ui.Color(0xFFFFFFFF)..isAntiAlias = true,
+    );
 
     // 사진 클립
     canvas.save();
-    final clipPath = _pinPath(w, sz, tip, radius - border + 1,
-        insetX: border, insetY: border);
-    canvas.clipPath(clipPath);
-
+    canvas.clipRRect(
+      ui.RRect.fromRectAndRadius(
+        ui.Rect.fromLTWH(border, border, sz - border * 2, sz - border * 2),
+        const ui.Radius.circular(radius - border),
+      ),
+    );
     if (photo != null) {
       canvas.drawImageRect(
         photo,
         ui.Rect.fromLTWH(0, 0, photo.width.toDouble(), photo.height.toDouble()),
-        ui.Rect.fromLTWH(border, border, w - border * 2, sz - border * 2),
+        ui.Rect.fromLTWH(border, border, sz - border * 2, sz - border * 2),
         ui.Paint()..isAntiAlias = true,
       );
     } else {
-      // 사진 없을 때 주황 배경 + 카메라 아이콘
       canvas.drawRect(
-        ui.Rect.fromLTWH(border, border, w - border * 2, sz - border * 2),
+        ui.Rect.fromLTWH(border, border, sz - border * 2, sz - border * 2),
         ui.Paint()..color = const ui.Color(0xFFFF8A00),
       );
     }
     canvas.restore();
 
     final picture = recorder.endRecording();
-    final img  = await picture.toImage(w.toInt(), totalH.toInt());
+    final img  = await picture.toImage(sz.toInt(), sz.toInt());
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
     if (data == null) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
     return BitmapDescriptor.bytes(data.buffer.asUint8List());
-  }
-
-  static void _drawPinShape(
-    ui.Canvas canvas, double w, double sz, double tip, double r,
-    ui.Paint paint, {double offsetY = 0}
-  ) {
-    final path = _pinPath(w, sz, tip, r, offsetY: offsetY);
-    canvas.drawPath(path, paint);
-  }
-
-  static ui.Path _pinPath(
-    double w, double sz, double tip, double r, {
-    double insetX = 0, double insetY = 0, double offsetY = 0,
-  }) {
-    final left   = insetX;
-    final top    = insetY + offsetY;
-    final right  = w - insetX;
-    final bottom = sz - insetY + offsetY;
-    final mid    = w / 2;
-
-    return ui.Path()
-      ..moveTo(left + r, top)
-      ..lineTo(right - r, top)
-      ..arcToPoint(ui.Offset(right, top + r),
-          radius: ui.Radius.circular(r))
-      ..lineTo(right, bottom - r)
-      ..arcToPoint(ui.Offset(right - r, bottom),
-          radius: ui.Radius.circular(r))
-      ..lineTo(mid + 10, bottom)
-      ..lineTo(mid, bottom + tip - insetY)   // 꼭지 끝
-      ..lineTo(mid - 10, bottom)
-      ..lineTo(left + r, bottom)
-      ..arcToPoint(ui.Offset(left, bottom - r),
-          radius: ui.Radius.circular(r))
-      ..lineTo(left, top + r)
-      ..arcToPoint(ui.Offset(left + r, top),
-          radius: ui.Radius.circular(r))
-      ..close();
   }
 
   /// 클러스터 마커 (여러 핀 묶음)

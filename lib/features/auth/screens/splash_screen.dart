@@ -87,7 +87,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _start() async {
     _introCtrl.forward().then((_) {
       if (mounted) {
-        _bounceCtrl.repeat(reverse: true);
         _glowCtrl.repeat(reverse: true);
       }
     });
@@ -150,9 +149,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       const Spacer(flex: 5),
 
                       // ── 핀 아이콘 + 글로우 링 ──────────────────────────────────
-                      Transform.translate(
-                        offset: Offset(0, _bounceY.value),
-                        child: Stack(
+                      Stack(
                           alignment: Alignment.center,
                           children: [
                             // 외곽 글로우
@@ -193,13 +190,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                   width: 110,
                                   height: 128,
                                   child: CustomPaint(
-                                    painter: _PinIconPainter(squishY: _squishY.value),
+                                    painter: _PinIconPainter(),
                                   ),
                                 ),
                               ),
                             ),
                           ],
-                        ),
                       ),
 
                       const SizedBox(height: 52),
