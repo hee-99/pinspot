@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/sample_data_service.dart';
+import '../../../features/tigo/services/tigo_service.dart';
 import '../../home/screens/home_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -111,9 +113,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   Future<void> _resolveNext() async {
-    final prefs = await SharedPreferences.getInstance();
+    final results = await Future.wait([
+      SharedPreferences.getInstance(),
+      TigoService.instance.load(),
+      SampleDataService.seedIfEmpty(),
+      AuthService.isLoggedIn(),
+    ]);
+    final prefs = results[0] as SharedPreferences;
+    final loggedIn = results[3] as bool;
     final onboardingDone = prefs.getBool('onboarding_done') ?? false;
-    final loggedIn = await AuthService.isLoggedIn();
     _next = !onboardingDone
         ? const OnboardingScreen()
         : loggedIn
