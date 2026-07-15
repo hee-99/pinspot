@@ -26,57 +26,60 @@ class TigoAvatar extends StatelessWidget {
       width: size,
       height: size,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           if (showBase)
-            _AssetLayer(
-              assetPath: 'assets/tigo/base/tigo_base_front.png',
-              size: size,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.2),
+              child: Image.asset(
+                'assets/tigo/tigo_hero.png',
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+              ),
             ),
-          for (final item in equippedItems)
-            _AssetLayer(assetPath: item.asset, size: size),
+          // 장착 아이템 이모지 뱃지 (우측 하단 ~ 우측 상단 방향으로 배치)
+          for (int i = 0; i < equippedItems.length; i++)
+            Positioned(
+              right: -4,
+              top: i * (size * 0.28),
+              child: _EmojiBadge(
+                emoji: equippedItems[i].emoji,
+                badgeSize: size * 0.30,
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-class _AssetLayer extends StatelessWidget {
-  final String assetPath;
-  final double size;
+class _EmojiBadge extends StatelessWidget {
+  final String emoji;
+  final double badgeSize;
 
-  const _AssetLayer({required this.assetPath, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      assetPath,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => _PlaceholderLayer(size: size),
-    );
-  }
-}
-
-class _PlaceholderLayer extends StatelessWidget {
-  final double size;
-  const _PlaceholderLayer({required this.size});
+  const _EmojiBadge({required this.emoji, required this.badgeSize});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: badgeSize,
+      height: badgeSize,
       decoration: BoxDecoration(
-        color: TigoColors.cream,
-        borderRadius: BorderRadius.circular(size * 0.15),
-        border: Border.all(color: TigoColors.orangeSoft, width: 2),
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Center(
-        child: Icon(
-          Icons.pets,
-          size: size * 0.4,
-          color: TigoColors.orange,
+        child: Text(
+          emoji,
+          style: TextStyle(fontSize: badgeSize * 0.52),
         ),
       ),
     );

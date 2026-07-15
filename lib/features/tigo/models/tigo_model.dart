@@ -19,6 +19,7 @@ class TigoItem {
   final TigoSlot slot;
   final String name;
   final String asset;
+  final String emoji;
   final TigoUnlock unlock;
   final int zIndex;
 
@@ -27,6 +28,7 @@ class TigoItem {
     required this.slot,
     required this.name,
     required this.asset,
+    required this.emoji,
     required this.unlock,
     required this.zIndex,
   });

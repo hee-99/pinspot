@@ -395,22 +395,12 @@ class _ItemCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: ColorFiltered(
-                      colorFilter: unlocked
-                          ? const ColorFilter.mode(Colors.transparent, BlendMode.saturation)
-                          : const ColorFilter.matrix([
-                              0.2126, 0.7152, 0.0722, 0, 0,
-                              0.2126, 0.7152, 0.0722, 0, 0,
-                              0.2126, 0.7152, 0.0722, 0, 0,
-                              0,      0,      0,      1, 0,
-                            ]),
-                      child: Image.asset(
-                        item.asset,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.pets,
-                          size: 48,
-                          color: unlocked ? TigoColors.orange : TigoColors.locked,
+                    child: Center(
+                      child: Opacity(
+                        opacity: unlocked ? 1.0 : 0.3,
+                        child: Text(
+                          item.emoji,
+                          style: const TextStyle(fontSize: 48),
                         ),
                       ),
                     ),
