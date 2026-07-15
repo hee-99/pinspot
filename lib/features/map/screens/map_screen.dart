@@ -382,6 +382,30 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _onSearchChanged(String v) {
+    setState(() => _searchQuery = v);
+    if (v.trim().isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final positions = [
+        ..._filteredStaticPins.map((p) => p.pos),
+        ..._filteredSavedPins.map((p) => LatLng(p.lat, p.lng)),
+      ];
+      if (positions.isEmpty || !mounted) {
+        _showSnack('검색 결과가 없습니다');
+        return;
+      }
+      final ctrl = await _mapCtrl.future;
+      if (positions.length == 1) {
+        ctrl.animateCamera(CameraUpdate.newLatLngZoom(positions.first, 15));
+      } else {
+        ctrl.animateCamera(
+          CameraUpdate.newLatLngBounds(_boundsFromPoints(positions), 80),
+        );
+      }
+    });
+  }
+
   void _showSnack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -465,7 +489,7 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                               child: TextField(
                                 controller: _searchCtrl,
-                                onChanged: (v) => setState(() => _searchQuery = v),
+                                onChanged: _onSearchChanged,
                                 style: const TextStyle(fontSize: 15, color: AppColors.neutral900),
                                 decoration: InputDecoration(
                                   hintText: '장소, 카테고리 검색',
