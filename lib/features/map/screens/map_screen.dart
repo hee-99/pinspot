@@ -164,22 +164,26 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _loadSavedPins() async {
     final pins = await PinService.getPins();
     if (!mounted) return;
-    final Map<String, BitmapDescriptor> icons = {};
-    for (final pin in pins) {
-      final path = pin.photoPath;
-      if (path != null && path.isNotEmpty && !kIsWeb) {
+
+    final pinsWithPhoto = kIsWeb
+        ? <PinModel>[]
+        : pins.where((p) => p.photoPath != null && p.photoPath!.isNotEmpty).toList();
+
+    final entries = await Future.wait(
+      pinsWithPhoto.map((pin) async {
         try {
-          icons[pin.id] = await MarkerBuilder.buildPhotoMarker(path);
+          final icon = await MarkerBuilder.buildPhotoMarker(pin.photoPath!);
+          return MapEntry(pin.id, icon);
         } catch (_) {
-          // 사진 로드 실패 시 기본 마커 사용 (발톱 없음)
+          return null;
         }
-      }
-      // 사진 없는 핀은 _markers getter에서 기본 마커로 처리
-    }
+      }),
+    );
+
     if (!mounted) return;
     setState(() {
       _savedPins = pins;
-      _markerIcons = icons;
+      _markerIcons = Map.fromEntries(entries.whereType<MapEntry<String, BitmapDescriptor>>());
       _travelStats = TigoService.computeStats(pins);
     });
   }

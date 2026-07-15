@@ -20,12 +20,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // 0: 카메라(modal), 1: 지도, 2: 커뮤니티, 3: 프로필
   int _currentIndex = 1; // 기본: 지도
 
-  static const _screens = [
-    SizedBox.shrink(),  // 0: 카메라 → modal
-    MapScreen(),        // 1: 지도
-    CommunityScreen(),  // 2: 커뮤니티
-    ProfileScreen(),    // 3: 프로필
-  ];
+  // 첫 방문 시에만 실제 위젯을 빌드 (lazy init)
+  final Set<int> _builtIndices = {1};
 
   @override
   void initState() {
@@ -52,7 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final accepted = prefs.getBool('privacy_accepted') ?? false;
     if (!accepted && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showPrivacyNotice());
+      // 지도·초기 UI가 완전히 렌더된 후 시트 표시
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) _showPrivacyNotice();
     }
   }
 
@@ -86,14 +84,25 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
-    setState(() => _currentIndex = index);
+    setState(() {
+      _builtIndices.add(index); // 첫 방문 시 위젯 빌드 트리거
+      _currentIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3EE),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          const SizedBox.shrink(),
+          const MapScreen(),
+          _builtIndices.contains(2) ? const CommunityScreen() : const SizedBox.shrink(),
+          _builtIndices.contains(3) ? const ProfileScreen()   : const SizedBox.shrink(),
+        ],
+      ),
       bottomNavigationBar: _BottomNav(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
@@ -108,8 +117,7 @@ class _BottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
 
-  static const _orange   = Color(0xFFFF8A00);
-  static const _inactive = Color(0xFFAAAAAA);
+  static const _orange = Color(0xFFFF8A00);
 
   @override
   Widget build(BuildContext context) {
