@@ -128,6 +128,9 @@ class AuthService {
   // ── 구글 로그인 ───────────────────────────────────────────────────────────────
 
   static Future<UserModel?> signInWithGoogle() async {
+    if (_googleWebClientId.startsWith('YOUR_')) {
+      throw Exception('Google Client ID not configured');
+    }
     try {
       final account = await _googleSignIn.signIn();
       if (account == null) return null; // 사용자 취소
