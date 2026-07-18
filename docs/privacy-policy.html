@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinspot 개인정보처리방침 / Privacy Policy</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif; line-height: 1.7; max-width: 800px; margin: 0 auto; padding: 32px 20px 80px; color: #1c1c1e; background: #fff; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin-top: 40px; border-bottom: 2px solid #16A34A; padding-bottom: 6px; }
+  h3 { font-size: 15px; margin-top: 20px; }
+  p, li { font-size: 14px; color: #333; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f5f3ee; }
+  .meta { color: #6B7280; font-size: 13px; margin-bottom: 24px; }
+  .lang-divider { margin: 60px 0; border: none; border-top: 4px solid #1c1c1e; }
+  .note { background: #F0FDF4; border-left: 4px solid #16A34A; padding: 10px 14px; font-size: 13px; margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<h1>Pinspot 개인정보처리방침</h1>
+<p class="meta">
+  시행일자: 2026-07-18 &nbsp;|&nbsp; 최종 수정일: 2026-07-18<br>
+  <strong>[TODO: 서비스 운영자명 / 연락처 이메일을 실제 값으로 확정해주세요 — 현재 임시값: jhwnss@gmail.com]</strong>
+</p>
+
+<p>
+Pinspot(이하 "회사" 또는 "앱")은 이용자의 개인정보를 중요시하며, 「개인정보 보호법」 등 관련 법령을 준수하고 있습니다.
+본 개인정보처리방침을 통해 이용자가 제공하는 개인정보가 어떠한 목적과 방식으로 이용되고 있으며,
+개인정보 보호를 위해 어떠한 조치가 취해지고 있는지 알려드립니다.
+</p>
+
+<div class="note">
+Pinspot은 별도의 자체 서버를 운영하지 않으며, 앱에서 생성되는 데이터(핀, 프로필, 커뮤니티 등)는
+전부 <strong>이용자 기기 내부에만 저장</strong>됩니다. 회사는 이 데이터를 수집·보관·전송하지 않습니다.
+</div>
+
+<h2>1. 수집하는 개인정보 항목 및 수집 방법</h2>
+
+<h3>1-1. 회원가입/로그인 시</h3>
+<table>
+<tr><th>로그인 방식</th><th>수집 항목</th><th>비고</th></tr>
+<tr><td>카카오 로그인</td><td>닉네임, 이메일(선택 동의 시), 프로필 사진 URL</td><td>카카오 계정 정보 제공 동의 범위에 따름</td></tr>
+<tr><td>네이버 로그인</td><td>이름/닉네임, 이메일(선택), 프로필 사진 URL</td><td>네이버 계정 정보 제공 동의 범위에 따름</td></tr>
+<tr><td>구글 로그인</td><td>이름, 이메일, 프로필 사진 URL</td><td>-</td></tr>
+<tr><td>애플 로그인</td><td>이름(선택), 이메일(선택, Apple 릴레이 이메일일 수 있음)</td><td>-</td></tr>
+<tr><td>이메일 자체 가입</td><td>이름, 이메일, 비밀번호(암호화 저장)</td><td>비밀번호는 SHA-256 해시로 저장</td></tr>
+<tr><td>게스트(테스트) 로그인</td><td>없음 (임시 기기 내 식별자만 생성)</td><td>-</td></tr>
+</table>
+
+<h3>1-2. 서비스 이용 과정에서 자동/추가 수집되는 정보</h3>
+<table>
+<tr><th>항목</th><th>수집 목적</th><th>수집 방법</th></tr>
+<tr><td>위치정보 (GPS, 정밀/대략)</td><td>지도 표시, 주변 핀 탐색, 현재 위치 표시, 경로 안내</td><td>기기 위치 권한 (ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION)</td></tr>
+<tr><td>카메라 촬영 사진</td><td>핀(장소 기록) 등록, 프로필 사진 설정</td><td>기기 카메라 권한</td></tr>
+<tr><td>갤러리 사진 및 사진의 EXIF 위치정보</td><td>핀 등록 시 촬영 위치 자동 인식</td><td>기기 사진 라이브러리 접근 권한</td></tr>
+</table>
+
+<div class="note">
+위 정보는 모두 <strong>이용자 기기 내부(SharedPreferences 및 로컬 파일 저장소)에만 저장</strong>되며,
+회사의 서버로 전송되거나 회사가 별도로 수집·보관하지 않습니다.
+</div>
+
+<h2>2. 개인정보의 이용 목적</h2>
+<ul>
+<li>회원 식별 및 로그인 상태 유지</li>
+<li>지도 기반 서비스 제공 (핀 등록/조회, 경로 안내, 주변 정보 표시)</li>
+<li>커뮤니티/소셜 기능 제공 (그룹 참여, 팔로잉, 프로필 표시)</li>
+<li>서비스 부정 이용 방지 및 계정 보호</li>
+</ul>
+
+<h2>3. 개인정보의 보유 및 이용 기간</h2>
+<p>
+회사는 별도의 서버를 운영하지 않으므로, 모든 개인정보 및 서비스 이용 데이터는 <strong>이용자의 기기에만 저장</strong>됩니다.
+따라서:
+</p>
+<ul>
+<li>이용자가 앱 내 "로그아웃"을 하더라도 기기에 저장된 데이터는 유지될 수 있습니다.</li>
+<li>이용자가 앱을 <strong>삭제(제거)하면 기기에 저장된 모든 정보(계정 정보, 핀, 사진 등)가 함께 영구 삭제</strong>됩니다.</li>
+<li>회사는 별도로 백업된 개인정보를 보유하지 않으므로, 앱 삭제 후에는 데이터를 복구할 수 없습니다.</li>
+</ul>
+
+<h2>4. 개인정보의 제3자 제공</h2>
+<p>회사는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만 서비스 제공을 위해 아래와 같이 외부 사업자의 API를 이용하며,
+이 과정에서 최소한의 정보가 해당 사업자에게 전달됩니다.</p>
+
+<table>
+<tr><th>제공받는 자</th><th>제공 항목</th><th>제공 목적</th></tr>
+<tr><td>Google (Maps Platform)</td><td>위경도 좌표</td><td>지도 표시, 경로(길찾기) 계산</td></tr>
+<tr><td>Google (Gemini API)</td><td>장소명, 대략적 위경도 좌표 (개인 식별 정보 미포함)</td><td>랜드마크(관광지) 설명 정보 생성</td></tr>
+<tr><td>Wikipedia (한국어 위키백과)</td><td>장소명 검색어</td><td>랜드마크 설명 정보 조회</td></tr>
+<tr><td>카카오 / 네이버 / 구글 / 애플</td><td>로그인 인증 정보</td><td>소셜 로그인 인증 (각 사업자 자체 개인정보처리방침 적용)</td></tr>
+</table>
+
+<p>위 사업자들은 각자의 개인정보처리방침에 따라 정보를 처리하며, 회사는 이용자의 계정 식별정보(이름, 이메일 등)를
+이들 사업자에게 별도로 전송하지 않습니다.</p>
+
+<h2>5. 개인정보 처리 위탁</h2>
+<p>회사는 원활한 서비스 제공을 위해 아래와 같이 업무를 위탁하고 있습니다.</p>
+<table>
+<tr><th>수탁자</th><th>위탁 업무 내용</th></tr>
+<tr><td>Google LLC</td><td>지도 렌더링, 경로 안내, AI 기반 장소 정보 생성</td></tr>
+</table>
+
+<h2>6. 이용자 및 법정대리인의 권리와 행사 방법</h2>
+<ul>
+<li>이용자는 언제든지 앱 내 프로필 화면에서 본인의 정보(이름, 사진 등)를 열람·수정할 수 있습니다.</li>
+<li>이용자는 앱 삭제를 통해 본인과 관련된 모든 정보를 즉시 파기할 수 있습니다.</li>
+<li>기타 문의사항은 아래 연락처로 문의하실 수 있습니다.</li>
+</ul>
+
+<h2>7. 개인정보의 파기 절차 및 방법</h2>
+<p>
+모든 개인정보는 이용자 기기 내에 저장되며, 앱 삭제 시 운영체제(Android/iOS)에 의해 관련 파일이 함께 삭제됩니다.
+회사는 별도의 서버 저장소를 운영하지 않으므로 추가적인 파기 절차가 필요하지 않습니다.
+</p>
+
+<h2>8. 수집하는 권한 및 이용 목적 (Android/iOS 접근 권한 고지)</h2>
+<table>
+<tr><th>권한</th><th>필수/선택</th><th>이용 목적</th></tr>
+<tr><td>위치정보 (정밀/대략)</td><td>필수</td><td>지도 표시, 주변 핀 탐색, 경로 안내</td></tr>
+<tr><td>카메라</td><td>필수</td><td>핀 등록용 사진 촬영</td></tr>
+<tr><td>사진/미디어</td><td>필수</td><td>핀 등록 시 갤러리 사진 선택 및 위치정보(EXIF) 추출</td></tr>
+<tr><td>인터넷</td><td>필수</td><td>지도/경로/랜드마크 정보 API 통신, 소셜 로그인</td></tr>
+</table>
+<p>이용자는 기기 설정에서 위 권한을 언제든지 철회할 수 있으며, 이 경우 관련 기능(지도, 사진 등록 등) 이용이 제한될 수 있습니다.</p>
+
+<h2>9. 광고 및 분석 도구</h2>
+<p>현재 앱은 광고 SDK 및 별도의 이용자 행태 분석(애널리틱스) 도구를 사용하지 않습니다.</p>
+
+<h2>10. 개인정보 보호책임자</h2>
+<table>
+<tr><td>담당자</td><td>[TODO: 이름/직책]</td></tr>
+<tr><td>이메일</td><td>jhwnss@gmail.com</td></tr>
+</table>
+<p>이용자는 서비스를 이용하며 발생한 모든 개인정보 관련 문의를 위 연락처로 하실 수 있습니다.</p>
+
+<h2>11. 고지의 의무</h2>
+<p>
+본 개인정보처리방침의 내용 추가, 삭제 및 수정이 있을 시에는 시행 최소 7일 전부터 앱 내 공지사항 또는
+본 문서를 통해 고지할 것입니다.
+</p>
+
+<hr class="lang-divider">
+
+<h1>Pinspot Privacy Policy</h1>
+<p class="meta">
+  Effective Date: 2026-07-18 &nbsp;|&nbsp; Last Updated: 2026-07-18<br>
+  <strong>[TODO: confirm operator name / contact email — placeholder: jhwnss@gmail.com]</strong>
+</p>
+
+<p>
+Pinspot ("we", "the App") values your privacy. This Privacy Policy explains what information is collected,
+how it is used, and how it is protected when you use the Pinspot app.
+</p>
+
+<div class="note">
+Pinspot does not operate its own backend server. All data created in the app (pins, profile, communities)
+is stored <strong>locally on your device only</strong>. We do not collect, transmit, or store this data on any server.
+</div>
+
+<h2>1. Information We Collect</h2>
+<h3>1-1. At Sign-up / Login</h3>
+<table>
+<tr><th>Login Method</th><th>Data Collected</th></tr>
+<tr><td>Kakao</td><td>Nickname, email (if consented), profile photo URL</td></tr>
+<tr><td>Naver</td><td>Name/nickname, email (if consented), profile photo URL</td></tr>
+<tr><td>Google</td><td>Name, email, profile photo URL</td></tr>
+<tr><td>Apple</td><td>Name (optional), email (optional, may be Apple relay email)</td></tr>
+<tr><td>Email sign-up</td><td>Name, email, password (stored as SHA-256 hash)</td></tr>
+<tr><td>Guest login</td><td>None (temporary local identifier only)</td></tr>
+</table>
+
+<h3>1-2. Collected During Use</h3>
+<table>
+<tr><th>Data</th><th>Purpose</th></tr>
+<tr><td>Location (GPS, precise/approximate)</td><td>Map display, nearby pin discovery, current location, directions</td></tr>
+<tr><td>Camera photos</td><td>Creating location "pins", profile photo</td></tr>
+<tr><td>Gallery photos and their EXIF location data</td><td>Auto-detecting the photo's capture location when creating a pin</td></tr>
+</table>
+
+<div class="note">
+All of the above is stored <strong>locally on your device only</strong> (SharedPreferences and local file storage)
+and is never transmitted to or stored on our servers, because we have none.
+</div>
+
+<h2>2. Purpose of Use</h2>
+<ul>
+<li>Member identification and login session management</li>
+<li>Map-based features (pin creation/viewing, directions, nearby information)</li>
+<li>Community/social features (groups, following, profile display)</li>
+<li>Preventing fraudulent use and protecting accounts</li>
+</ul>
+
+<h2>3. Retention Period</h2>
+<p>
+Because we operate no backend server, all personal data lives only on your device:
+</p>
+<ul>
+<li>Logging out in-app does not necessarily delete data already stored on the device.</li>
+<li><strong>Uninstalling the app permanently deletes all locally stored data</strong> (account info, pins, photos, etc.).</li>
+<li>We keep no backup copy, so data cannot be recovered after uninstallation.</li>
+</ul>
+
+<h2>4. Third-Party Disclosure</h2>
+<p>We do not sell or share your personal data. To provide core features, the following third-party APIs receive
+the minimum data necessary:</p>
+<table>
+<tr><th>Recipient</th><th>Data Shared</th><th>Purpose</th></tr>
+<tr><td>Google (Maps Platform)</td><td>Latitude/longitude coordinates</td><td>Map rendering, route/direction calculation</td></tr>
+<tr><td>Google (Gemini API)</td><td>Place name, approximate coordinates (no personal identifiers)</td><td>Generating landmark description content</td></tr>
+<tr><td>Wikipedia (Korean)</td><td>Place name search query</td><td>Landmark information lookup</td></tr>
+<tr><td>Kakao / Naver / Google / Apple</td><td>Authentication data</td><td>Social login (governed by each provider's own privacy policy)</td></tr>
+</table>
+
+<h2>5. Data Processing Outsourcing</h2>
+<table>
+<tr><th>Processor</th><th>Task</th></tr>
+<tr><td>Google LLC</td><td>Map rendering, directions, AI-based landmark information generation</td></tr>
+</table>
+
+<h2>6. Your Rights</h2>
+<ul>
+<li>You can view/edit your profile information (name, photo, etc.) anytime in the app.</li>
+<li>You can permanently delete all your data by uninstalling the app.</li>
+<li>For any other inquiries, contact us using the information below.</li>
+</ul>
+
+<h2>7. Data Deletion Procedure</h2>
+<p>
+All personal data resides on your device and is deleted by the OS (Android/iOS) when the app is uninstalled.
+Since we operate no server-side storage, no additional deletion procedure is necessary.
+</p>
+
+<h2>8. App Permissions</h2>
+<table>
+<tr><th>Permission</th><th>Required?</th><th>Purpose</th></tr>
+<tr><td>Location (precise/approximate)</td><td>Required</td><td>Map display, nearby pin discovery, directions</td></tr>
+<tr><td>Camera</td><td>Required</td><td>Taking photos for pins</td></tr>
+<tr><td>Photos/Media</td><td>Required</td><td>Selecting gallery photos and extracting EXIF location for pins</td></tr>
+<tr><td>Internet</td><td>Required</td><td>Map/directions/landmark API calls, social login</td></tr>
+</table>
+<p>You may revoke these permissions anytime in device settings; doing so may limit related features.</p>
+
+<h2>9. Advertising & Analytics</h2>
+<p>The app currently uses no advertising SDK and no user-behavior analytics tool.</p>
+
+<h2>10. Privacy Officer / Contact</h2>
+<table>
+<tr><td>Contact</td><td>[TODO: name/title]</td></tr>
+<tr><td>Email</td><td>jhwnss@gmail.com</td></tr>
+</table>
+
+<h2>11. Changes to This Policy</h2>
+<p>
+Material changes to this policy will be announced in-app or via this document at least 7 days before taking effect.
+</p>
+
+</body>
+</html>
