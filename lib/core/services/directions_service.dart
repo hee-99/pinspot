@@ -15,7 +15,7 @@ class DirectionsResult {
 }
 
 class DirectionsService {
-  static const _apiKey = 'AIzaSyAyEl5Vc30X00H4SX6Px6CdxvLTeDPqJFA';
+  static const _apiKey = String.fromEnvironment('GOOGLE_DIRECTIONS_API_KEY');
 
   static Future<DirectionsResult?> getDirections({
     required LatLng origin,

@@ -10,9 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/user_model.dart';
 
-// ★ Google Cloud Console(https://console.cloud.google.com)에서 발급받은
-//   OAuth 2.0 웹 클라이언트 ID로 교체하세요.
-const String _googleWebClientId = 'YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com';
+const String _googleWebClientId = '762402450188-k83an1bp12ufvrp65pq1kpmo7bjgskum.apps.googleusercontent.com';
 
 final _googleSignIn = GoogleSignIn(
   clientId: kIsWeb ? _googleWebClientId : null,

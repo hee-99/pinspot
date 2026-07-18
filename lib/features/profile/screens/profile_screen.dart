@@ -459,7 +459,7 @@ class _ProfileHeader extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF0D1A0A), Color(0xFF2D6A4F), Color(0xFF16A34A)],
+                        colors: [Color(0xFF2A1605), AppColors.primaryDark, AppColors.primary],
                         stops: [0.0, 0.5, 1.0],
                       ),
                     ),
@@ -467,13 +467,6 @@ class _ProfileHeader extends StatelessWidget {
                   Opacity(
                     opacity: 0.06,
                     child: CustomPaint(painter: _DotGridPainter()),
-                  ),
-                  Positioned(
-                    right: 20, bottom: 16,
-                    child: Opacity(
-                      opacity: 0.18,
-                      child: const Text('📍', style: TextStyle(fontSize: 68)),
-                    ),
                   ),
                 ],
               ),
