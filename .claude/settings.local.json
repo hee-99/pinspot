@@ -157,7 +157,15 @@
       "Bash(echo \"launched in background, pid: $!\")",
       "Bash(gh api *)",
       "PowerShell(gh *)",
-      "WebFetch(domain:hee-99.github.io)"
+      "WebFetch(domain:hee-99.github.io)",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)",
+      "Bash(echo \"emulator started, pid: $!\")",
+      "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe wait-for-device *)",
+      "Bash(timeout 90 bash -c 'until $0 shell getprop sys.boot_completed 2>/dev/null | grep -q 1; do sleep 3; done' /c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe)",
+      "Bash(echo \"flutter run started in background, pid: $!\")",
+      "Bash(timeout 180 bash -c 'until grep -qE \"Flutter run key commands|Application finished|Error|error:\" /tmp/flutter_run.log 2>/dev/null; do sleep 5; done')",
+      "Bash(timeout 120 bash -c 'until grep -qE \"Flutter run key commands|Lost connection to device|Application finished\" /tmp/flutter_run.log 2>/dev/null; do sleep 5; done')",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices -l)"
     ]
   }
 }
