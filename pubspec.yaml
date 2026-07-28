@@ -82,8 +82,6 @@ flutter:
   assets:
     - assets/map_style.json
     - assets/tigo/
-    - assets/tigo/base/
-    - assets/tigo/items/
     - assets/tigo/pin/
     - assets/tigo/friend/
     - assets/tigo/logo/
