@@ -10,6 +10,7 @@ import '../../../core/services/locale_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/models/pin_model.dart';
+import '../../../core/models/pinpler_tier.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pin_service.dart';
@@ -514,6 +515,8 @@ class _ProfileHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 7),
+                _TierBadge(tier: PinplerTierX.fromPinCount(pinCount)),
                 if (providerLabel != null) ...[
                   const SizedBox(width: 7),
                   Container(
@@ -605,6 +608,33 @@ class _ProfileHeader extends StatelessWidget {
       radius: 44,
       backgroundColor: AppTheme.primary,
       child: Icon(Icons.person, size: 44, color: Colors.white),
+    );
+  }
+}
+
+class _TierBadge extends StatelessWidget {
+  final PinplerTier tier;
+  const _TierBadge({required this.tier});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: tier.color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(tier.badgeEmoji, style: const TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Text(
+            tier.label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: tier.color),
+          ),
+        ],
+      ),
     );
   }
 }

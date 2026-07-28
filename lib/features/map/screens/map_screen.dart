@@ -57,6 +57,8 @@ class _MapScreenState extends State<MapScreen> {
   List<PinModel> _savedPins = [];
   Map<String, BitmapDescriptor> _markerIcons = {};
   TravelStats? _travelStats;
+  BitmapDescriptor? _myLocationIcon;
+  StreamSubscription<Position>? _posSub;
 
   static const _defaultPos = LatLng(37.5665, 126.9780);
 
@@ -143,7 +145,22 @@ class _MapScreenState extends State<MapScreen> {
       onTap: () => _showDangerSheet(dz),
     )).toSet();
 
-    return {...staticMarkers, ...savedMarkers, ...dangerMarkers};
+    // 내 위치: 파란 점 대신 티고 아바타 마커
+    final myLocationMarker = (_currentPos != null && _myLocationIcon != null)
+        ? {
+            Marker(
+              markerId: const MarkerId('my_location'),
+              position: _currentPos!,
+              icon: _myLocationIcon!,
+              anchor: const Offset(0.5, 0.5),
+              flat: true,
+              zIndexInt: 999,
+              consumeTapEvents: true,
+            ),
+          }
+        : <Marker>{};
+
+    return {...staticMarkers, ...savedMarkers, ...dangerMarkers, ...myLocationMarker};
   }
 
   @override
@@ -153,7 +170,13 @@ class _MapScreenState extends State<MapScreen> {
     _fetchLocation();
     _loadCategories();
     _loadSavedPins();
+    _loadMyLocationIcon();
     PinRefreshNotifier.instance.addListener(_loadSavedPins);
+  }
+
+  Future<void> _loadMyLocationIcon() async {
+    final icon = await MarkerBuilder.buildMyLocationMarker();
+    if (mounted) setState(() => _myLocationIcon = icon);
   }
 
   Future<void> _loadCategories() async {
@@ -191,6 +214,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     PinRefreshNotifier.instance.removeListener(_loadSavedPins);
+    _posSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -239,6 +263,7 @@ class _MapScreenState extends State<MapScreen> {
       });
       final ctrl = await _mapCtrl.future;
       ctrl.animateCamera(CameraUpdate.newLatLngZoom(_currentPos!, 14));
+      _startPositionStream();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -246,6 +271,16 @@ class _MapScreenState extends State<MapScreen> {
         _locationError = '위치를 가져올 수 없습니다';
       });
     }
+  }
+
+  void _startPositionStream() {
+    _posSub?.cancel();
+    _posSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 3),
+    ).listen((pos) {
+      if (!mounted) return;
+      setState(() => _currentPos = LatLng(pos.latitude, pos.longitude));
+    });
   }
 
   Future<void> _moveToMyLocation() async {
@@ -443,7 +478,7 @@ class _MapScreenState extends State<MapScreen> {
             initialCameraPosition: const CameraPosition(target: _defaultPos, zoom: 13),
             onMapCreated: _mapCtrl.complete,
             style: _mapStyle,
-            myLocationEnabled: _currentPos != null,
+            myLocationEnabled: false,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             markers: _markers,

@@ -14,6 +14,14 @@ class RegionUnlock extends TigoUnlock {
   const RegionUnlock(this.category);
 }
 
+/// 인앱결제로 구매해서 해금하는 프리미엄 아이템.
+/// [productId]는 Play Console(수익 창출 > 제품 > 인앱 상품)에 등록한 상품 ID와 반드시 동일해야 함.
+class PurchaseUnlock extends TigoUnlock {
+  final int priceKrw;
+  final String productId;
+  const PurchaseUnlock(this.priceKrw, this.productId);
+}
+
 class TigoItem {
   final String id;
   final TigoSlot slot;
@@ -45,6 +53,12 @@ class TigoItem {
     if (unlock is UploadCountUnlock) return (unlock as UploadCountUnlock).threshold;
     return 999;
   }
+
+  bool get isPremium => unlock is PurchaseUnlock;
+
+  int? get priceKrw => unlock is PurchaseUnlock ? (unlock as PurchaseUnlock).priceKrw : null;
+
+  String? get productId => unlock is PurchaseUnlock ? (unlock as PurchaseUnlock).productId : null;
 }
 
 class TigoState {

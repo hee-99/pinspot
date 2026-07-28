@@ -1,10 +1,11 @@
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/sample_data_service.dart';
 import '../../../features/tigo/services/tigo_service.dart';
+import '../../../features/tigo/services/tigo_purchase_service.dart';
 import '../../home/screens/home_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -113,6 +114,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   Future<void> _resolveNext() async {
+    // 스토어 조회는 느릴 수 있어 스플래시 전환을 막지 않도록 fire-and-forget으로 시작.
+    unawaited(TigoPurchaseService.instance.init());
+
     final results = await Future.wait([
       SharedPreferences.getInstance(),
       TigoService.instance.load(),
@@ -189,17 +193,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 ),
                               ),
                             ),
-                            // 귀여운 핀 캐릭터
+                            // 티고 심볼 (앱 아이콘과 동일한 이미지)
                             Transform.scale(
                               scale: _pinScale.value,
                               child: Opacity(
                                 opacity: _pinFade.value,
-                                child: SizedBox(
-                                  width: 110,
+                                child: Image.asset(
+                                  'assets/tigo/app_icon_fg_v2.png',
+                                  width: 128,
                                   height: 128,
-                                  child: CustomPaint(
-                                    painter: _PinIconPainter(),
-                                  ),
                                 ),
                               ),
                             ),
@@ -317,91 +319,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       },
     );
   }
-}
-
-// 귀여운 핀 캐릭터 (앱 아이콘과 동일한 디자인)
-class _PinIconPainter extends CustomPainter {
-  final double squishY; // 1.0 = 정상, <1.0 = 착지 시 납작해짐
-  const _PinIconPainter({this.squishY = 1.0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final cx = w / 2;
-
-    final headR  = w * 0.36;
-    final headCy = h * 0.52 / squishY;
-    final tailY  = h * 0.90;
-
-    // ── 글로우 그림자 ──────────────────────────────────────
-    final glowPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.45)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
-    canvas.drawPath(_pinPath(cx, headCy, headR, tailY, squishY), glowPaint);
-
-    // ── 핀 흰색 몸통 ──────────────────────────────────────
-    canvas.drawPath(
-      _pinPath(cx, headCy, headR, tailY, squishY),
-      Paint()..color = Colors.white,
-    );
-
-    // ── 눈 ───────────────────────────────────────────────
-    final eyeY   = headCy - headR - w * 0.01;
-    final eyeR   = w * 0.082;
-    final eyeGap = w * 0.156;
-
-    for (final sign in [-1.0, 1.0]) {
-      final ex = cx + sign * eyeGap;
-      canvas.drawCircle(Offset(ex, eyeY), eyeR, Paint()..color = const Color(0xFF161616));
-      canvas.drawCircle(
-        Offset(ex - eyeR * 0.28, eyeY - eyeR * 0.32),
-        eyeR * 0.26,
-        Paint()..color = Colors.white,
-      );
-    }
-
-    // ── 미소 ─────────────────────────────────────────────
-    final smilePaint = Paint()
-      ..color = AppColors.tigoBrown.withValues(alpha: 0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.018
-      ..strokeCap = StrokeCap.round;
-    final smileRect = Rect.fromCenter(
-      center: Offset(cx, eyeY + w * 0.072),
-      width: w * 0.20,
-      height: w * 0.10,
-    );
-    canvas.drawArc(smileRect, 0.28, 2.58, false, smilePaint);
-
-    // ── 발 그림자 타원 ────────────────────────────────────
-    final shadowW = w * 0.28 * squishY;
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, tailY + h * 0.03), width: shadowW, height: h * 0.04),
-      Paint()..color = AppColors.primary.withValues(alpha: 0.30),
-    );
-  }
-
-  Path _pinPath(double cx, double headCy, double headR, double tailY, double squishY) {
-    const neckDeg = 42.0;
-    final path = Path();
-    final pts = <Offset>[];
-    final arcSpan = 360.0 - (180.0 - neckDeg - neckDeg);
-    const steps = 80;
-    for (int i = 0; i <= steps; i++) {
-      final a = (neckDeg - arcSpan * i / steps) * 3.14159265 / 180.0;
-      pts.add(Offset(
-        cx + headR * math.cos(a),
-        headCy + headR * math.sin(a) * squishY,
-      ));
-    }
-    pts.add(Offset(cx, tailY));
-    path.addPolygon(pts, true);
-    return path;
-  }
-
-  @override
-  bool shouldRepaint(covariant _PinIconPainter old) => old.squishY != squishY;
 }
 
 class _SplashBgPainter extends CustomPainter {

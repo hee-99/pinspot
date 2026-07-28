@@ -4,6 +4,7 @@ import '../../../core/services/pin_service.dart';
 import '../data/tigo_items.dart';
 import '../models/tigo_model.dart';
 import '../services/tigo_service.dart';
+import '../services/tigo_purchase_service.dart';
 import '../widgets/tigo_avatar.dart';
 
 const _kSlotLabels = {
@@ -151,6 +152,7 @@ class _TigoHeader extends StatelessWidget {
 
   int _nextThreshold(TigoState state) {
     for (final item in kTigoItems) {
+      if (item.isPremium) continue;
       if (!state.unlockedItemIds.contains(item.id)) return item.threshold;
     }
     return -1;
@@ -257,7 +259,7 @@ class _ProgressBar extends StatelessWidget {
   }
 
   int _prevThreshold(int count) {
-    final thresholds = kTigoItems.map((i) => i.threshold).toList()..sort();
+    final thresholds = kTigoItems.where((i) => !i.isPremium).map((i) => i.threshold).toList()..sort();
     int prev = 0;
     for (final t in thresholds) {
       if (t > count) break;
@@ -335,16 +337,62 @@ class _SlotGrid extends StatelessWidget {
         final item = items[i];
         final unlocked = state.unlockedItemIds.contains(item.id);
         final isEquipped = state.equipped[item.slot] == item.id;
+        VoidCallback? onTap;
+        if (unlocked) {
+          onTap = () => TigoService.instance.toggleEquip(item.id);
+        } else if (item.isPremium) {
+          onTap = () => _showPurchaseDialog(context, item);
+        }
         return _ItemCard(
           item: item,
           unlocked: unlocked,
           isEquipped: isEquipped,
           uploadCount: state.uploadCount,
-          onTap: unlocked
-              ? () => TigoService.instance.toggleEquip(item.id)
-              : null,
+          onTap: onTap,
         );
       },
+    );
+  }
+
+  void _showPurchaseDialog(BuildContext context, TigoItem item) {
+    final product = TigoPurchaseService.instance.productFor(item);
+    final priceLabel = product?.price ?? '₩${item.priceKrw}';
+    final isRealStore = product != null;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('${item.emoji} ${item.name}', style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(
+          isRealStore
+              ? '프리미엄 아이템이에요. $priceLabel에 구매하면 도감에서 바로 꾸밀 수 있어요.\n결제는 Google Play 결제창에서 진행돼요.'
+              : '프리미엄 아이템이에요. $priceLabel에 구매하면 도감에서 바로 꾸밀 수 있어요.\n'
+                '(아직 스토어 상품이 등록/조회되지 않아 지금은 개발용 테스트로 확인만 하면 바로 해금돼요.)',
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TigoColors.orange,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final started = await TigoPurchaseService.instance.buy(item);
+              if (!started) {
+                // 스토어 상품 미등록/미조회 상태의 개발용 폴백.
+                await TigoService.instance.purchaseItem(item.id);
+              }
+              // 실제 스토어 결제 성공 시의 해금은 purchaseStream 콜백에서 비동기로 처리됨.
+            },
+            child: Text('$priceLabel 구매하기'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -418,8 +466,10 @@ class _ItemCard extends StatelessWidget {
                   if (!unlocked) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '사진 ${item.threshold - uploadCount}장 더!',
-                      style: TextStyle(fontSize: 11, color: TigoColors.orange),
+                      item.isPremium
+                          ? '₩${item.priceKrw} 구매'
+                          : '사진 ${item.threshold - uploadCount}장 더!',
+                      style: TextStyle(fontSize: 11, color: TigoColors.orange, fontWeight: item.isPremium ? FontWeight.w800 : FontWeight.w400),
                     ),
                   ],
                 ],
@@ -428,7 +478,11 @@ class _ItemCard extends StatelessWidget {
             if (!unlocked)
               Positioned(
                 top: 8, right: 8,
-                child: Icon(Icons.lock_rounded, size: 18, color: TigoColors.locked),
+                child: Icon(
+                  item.isPremium ? Icons.shopping_bag_rounded : Icons.lock_rounded,
+                  size: 18,
+                  color: item.isPremium ? TigoColors.orange : TigoColors.locked,
+                ),
               ),
             if (isEquipped)
               Positioned(

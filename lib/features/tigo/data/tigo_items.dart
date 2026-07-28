@@ -55,6 +55,15 @@ const List<TigoItem> kTigoItems = [
     unlock: UploadCountUnlock(100),
     zIndex: 0,
   ),
+  TigoItem(
+    id: 'skin_golden_tiger',
+    slot: TigoSlot.skin,
+    name: '황금 호랑이 스킨',
+    asset: 'assets/tigo/items/skin_golden_tiger.png',
+    emoji: '🐯',
+    unlock: PurchaseUnlock(2900, 'tigo_skin_golden_tiger'),
+    zIndex: 0,
+  ),
 ];
 
 TigoItem? tigoItemById(String id) {
@@ -64,3 +73,15 @@ TigoItem? tigoItemById(String id) {
     return null;
   }
 }
+
+TigoItem? tigoItemByProductId(String productId) {
+  try {
+    return kTigoItems.firstWhere((item) => item.productId == productId);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Play Console(수익 창출 > 제품 > 인앱 상품)에 그대로 등록해야 하는 상품 ID 목록.
+List<String> get kTigoPremiumProductIds =>
+    kTigoItems.where((i) => i.isPremium).map((i) => i.productId!).toList();

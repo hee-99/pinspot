@@ -2,9 +2,58 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MarkerBuilder {
+  /// 내 위치 마커: 파란 점 대신 티고 얼굴 원형 아바타 + 흰 테두리.
+  static Future<BitmapDescriptor> buildMyLocationMarker() async {
+    if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+
+    const double sz = 88.0;
+    const double ring = 4.0;
+
+    ui.Image? avatar;
+    try {
+      final bytes = await rootBundle.load('assets/tigo/tigo_hero.png');
+      final codec = await ui.instantiateImageCodec(
+        bytes.buffer.asUint8List(),
+        targetWidth: 80,
+        targetHeight: 80,
+      );
+      final frame = await codec.getNextFrame();
+      avatar = frame.image;
+    } catch (_) {}
+
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    const center = ui.Offset(sz / 2, sz / 2);
+
+    // 흰 테두리 링
+    canvas.drawCircle(center, sz / 2, ui.Paint()..color = const ui.Color(0xFFFFFFFF)..isAntiAlias = true);
+    // 주황 배경(이미지 로드 실패 시 대비)
+    canvas.drawCircle(center, sz / 2 - ring, ui.Paint()..color = const ui.Color(0xFFFF8A00)..isAntiAlias = true);
+
+    if (avatar != null) {
+      canvas.save();
+      canvas.clipPath(ui.Path()..addOval(ui.Rect.fromCircle(center: center, radius: sz / 2 - ring)));
+      final side = sz - ring * 2;
+      canvas.drawImageRect(
+        avatar,
+        ui.Rect.fromLTWH(0, 0, avatar.width.toDouble(), avatar.height.toDouble()),
+        ui.Rect.fromLTWH(ring, ring, side, side),
+        ui.Paint()..isAntiAlias = true,
+      );
+      canvas.restore();
+    }
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(sz.toInt(), sz.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    if (data == null) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+    return BitmapDescriptor.bytes(data.buffer.asUint8List());
+  }
+
   // 사진 마커: 발톱 크기와 동일한 정사각형 사진 썸네일 (흰 테두리 + 둥근 모서리)
   static Future<BitmapDescriptor> buildPhotoMarker(String imagePath) async {
     if (kIsWeb) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);

@@ -76,6 +76,19 @@ class TigoService extends ChangeNotifier {
     return newItems;
   }
 
+  /// 프리미엄 아이템 구매 확정 처리.
+  /// TODO: 실제 결제는 Play Console 상품 등록 + in_app_purchase 패키지 연동 후,
+  /// 결제 성공 콜백에서 이 메서드를 호출하도록 교체할 것. 지금은 구매 확정 시
+  /// 로컬에 바로 해금 처리하는 자리표시(placeholder) 상태.
+  Future<void> purchaseItem(String itemId) async {
+    if (_state.unlockedItemIds.contains(itemId)) return;
+    final prefs = await SharedPreferences.getInstance();
+    final unlocked = List<String>.from(_state.unlockedItemIds)..add(itemId);
+    _state = _state.copyWith(unlockedItemIds: unlocked);
+    await _saveUnlocked(prefs);
+    notifyListeners();
+  }
+
   Future<void> toggleEquip(String itemId) async {
     final item = tigoItemById(itemId);
     if (item == null) return;

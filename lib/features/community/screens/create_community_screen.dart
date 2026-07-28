@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/community_model.dart';
+import '../../../core/models/pinpler_tier.dart';
 import '../../../core/services/community_service.dart';
+import '../../../core/services/pin_service.dart';
 
 class CreateCommunityScreen extends StatefulWidget {
   const CreateCommunityScreen({super.key});
@@ -137,6 +139,15 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     final desc = _descCtrl.text.trim();
     if (name.isEmpty) return;
 
+    final pins = await PinService.getPins();
+    final tier = PinplerTierX.fromPinCount(pins.length);
+    final owned = (await CommunityService.getCommunities()).where((c) => c.isOwner).length;
+    if (owned >= tier.communityCreateLimit) {
+      if (!mounted) return;
+      await _showLimitDialog(tier);
+      return;
+    }
+
     setState(() => _submitting = true);
 
     final code = _isPrivate ? CommunityService.generateJoinCode() : null;
@@ -169,6 +180,42 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     }
 
     if (mounted) Navigator.pop(context, true);
+  }
+
+  Future<void> _showLimitDialog(PinplerTier tier) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(tier.badgeEmoji),
+            const SizedBox(width: 6),
+            Flexible(child: Text('${tier.label} 등급 한도', style: const TextStyle(fontWeight: FontWeight.w800))),
+          ],
+        ),
+        content: Text(
+          tier.nextThreshold == -1
+              ? '현재 등급에서 만들 수 있는 커뮤니티 개수(최대 ${tier.communityCreateLimit}개)를 모두 사용했어요.'
+              : '지금 등급(${tier.label})에서는 커뮤니티를 최대 ${tier.communityCreateLimit}개까지 만들 수 있어요.\n'
+                '핀을 ${tier.nextThreshold}개까지 등록하면 다음 등급으로 올라가면서 더 많이 만들 수 있어요!',
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: tier.color,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
