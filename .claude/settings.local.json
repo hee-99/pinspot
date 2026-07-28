@@ -339,7 +339,8 @@
       "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 shell screencap -p //sdcard/screen_unequip_hat.png)",
       "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 pull //sdcard/screen_unequip_hat.png /c/dev/pinspot/.claude_scratch/19_unequip_hat.png)",
       "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 shell screencap -p //sdcard/screen_final.png)",
-      "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 pull //sdcard/screen_final.png /c/dev/pinspot/.claude_scratch/20_final.png)"
+      "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 pull //sdcard/screen_final.png /c/dev/pinspot/.claude_scratch/20_final.png)",
+      "Skill(claude-in-chrome)"
     ]
   }
 }
