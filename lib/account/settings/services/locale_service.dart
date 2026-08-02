@@ -10,7 +10,7 @@ class LocaleService {
   static const _key = 'app_locale';
   static const _supported = ['ko', 'en', 'ja', 'zh'];
 
-  // 저장된 언어 설정을 불러오거나, 없으면 기기 언어를 감지해 초기화
+  // 저장된 언어 설정을 불러오거나, 없으면 한글로 시작 (기기 언어는 프로필에서 직접 바꿀 수 있음)
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_key);
@@ -18,11 +18,7 @@ class LocaleService {
       localeNotifier.value = Locale(saved);
       return;
     }
-    // Auto-detect from device
-    final deviceCode = WidgetsBinding
-        .instance.platformDispatcher.locale.languageCode;
-    localeNotifier.value =
-        Locale(_supported.contains(deviceCode) ? deviceCode : 'en');
+    localeNotifier.value = const Locale('ko');
   }
 
   // 언어를 변경하고 SharedPreferences에 저장

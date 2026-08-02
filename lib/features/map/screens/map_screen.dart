@@ -12,10 +12,10 @@ import 'package:pinspot/core/models/pin_rating_schema.dart';
 import 'package:pinspot/features/map/services/directions_service.dart';
 import 'package:pinspot/core/services/category_service.dart';
 import 'package:pinspot/features/pin/services/pin_service.dart';
-import 'package:pinspot/design/theme/tigo_colors.dart';
 import 'package:pinspot/design/utils/marker_builder.dart';
 import 'package:pinspot/features/tigo/models/tigo_model.dart';
 import 'package:pinspot/features/tigo/services/tigo_service.dart';
+import 'package:pinspot/features/map/data/followed_pinplers.dart';
 
 // 하드코딩된 데모용 핀(장소) — 정적 마커 데이터
 class _Pin {
@@ -62,6 +62,10 @@ class _MapScreenState extends State<MapScreen> {
   TravelStats? _travelStats;
   BitmapDescriptor? _myLocationIcon;
   StreamSubscription<Position>? _posSub;
+
+  // "팔로우한 사람 지도 보기" — 토글 on/off 및 현재 선택된 핀플러 (null = 나)
+  bool _showFollowed = false;
+  int? _selectedFollowedIndex;
 
   static const _defaultPos = LatLng(37.5665, 126.9780);
 
@@ -110,8 +114,9 @@ class _MapScreenState extends State<MapScreen> {
     return list;
   }
 
-  // 카테고리/검색어로 필터링된 사용자 저장 핀 목록
+  // 카테고리/검색어로 필터링된 사용자 저장 핀 목록 (팔로우한 다른 핀플러의 지도를 보는 중이면 내 핀은 숨김)
   List<PinModel> get _filteredSavedPins {
+    if (_selectedFollowedIndex != null) return [];
     var list = _selectedCategory == '전체'
         ? _savedPins
         : _savedPins.where((p) => p.category == _selectedCategory).toList();
@@ -169,7 +174,39 @@ class _MapScreenState extends State<MapScreen> {
           }
         : <Marker>{};
 
-    return {...staticMarkers, ...savedMarkers, ...dangerMarkers, ...myLocationMarker};
+    // 팔로우한 핀플러의 핀 마커 (선택 중일 때만) — 핀플러별 색상 hue로 구분
+    Set<Marker> followedMarkers = {};
+    if (_selectedFollowedIndex != null) {
+      final pinpler = followedPinplers[_selectedFollowedIndex!];
+      final hue = HSLColor.fromColor(pinpler.color).hue;
+      followedMarkers = pinpler.pins.map((loc) => Marker(
+        markerId: MarkerId('followed_${pinpler.name}_${loc.name}'),
+        position: loc.pos,
+        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+        infoWindow: InfoWindow(title: loc.name, snippet: pinpler.name),
+      )).toSet();
+    }
+
+    return {...staticMarkers, ...savedMarkers, ...dangerMarkers, ...myLocationMarker, ...followedMarkers};
+  }
+
+  // 팔로우 아바타 스트립에서 사람을 선택 — null이면 "나"(내 핀), 아니면 해당 핀플러의 핀으로 지도 전환
+  void _selectFollowed(int? index) {
+    setState(() => _selectedFollowedIndex = index);
+    if (index == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final pins = followedPinplers[index].pins;
+      if (pins.isEmpty) return;
+      final ctrl = await _mapCtrl.future;
+      if (pins.length == 1) {
+        ctrl.animateCamera(CameraUpdate.newLatLngZoom(pins.first.pos, 14));
+      } else {
+        ctrl.animateCamera(
+          CameraUpdate.newLatLngBounds(_boundsFromPoints(pins.map((p) => p.pos).toList()), 80),
+        );
+      }
+    });
   }
 
   @override
@@ -569,6 +606,32 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                             ),
                           ),
+                          // 팔로우한 사람 지도 보기 토글 버튼
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                _showFollowed = !_showFollowed;
+                                if (!_showFollowed) _selectedFollowedIndex = null;
+                              }),
+                              child: Container(
+                                width: 48, height: 48,
+                                decoration: BoxDecoration(
+                                  color: _showFollowed ? AppColors.primary : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4)),
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _showFollowed ? Icons.people_alt_rounded : Icons.people_outline_rounded,
+                                  color: _showFollowed ? Colors.white : AppColors.neutral600,
+                                  size: 21,
+                                ),
+                              ),
+                            ),
+                          ),
                           // 핀 카운트 뱃지 (필터 활성 시)
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
@@ -600,6 +663,73 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                     ),
+                    // "OOO님의 지도" 배너 — 팔로우한 핀플러의 지도를 보는 중일 때 표시
+                    if (_selectedFollowedIndex != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: GestureDetector(
+                          onTap: () => _selectFollowed(null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: followedPinplers[_selectedFollowedIndex!].color,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3))],
+                            ),
+                            child: Row(
+                              children: [
+                                Text(followedPinplers[_selectedFollowedIndex!].emoji, style: const TextStyle(fontSize: 15)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${followedPinplers[_selectedFollowedIndex!].name}님의 지도',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('내 지도로 돌아가기',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92))),
+                                    const SizedBox(width: 3),
+                                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    // 팔로우한 핀플러 아바타 스트립 (토글 on일 때만)
+                    if (_showFollowed)
+                      SizedBox(
+                        height: 78,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          children: [
+                            _FollowedAvatar(
+                              label: '나',
+                              emoji: '🙂',
+                              color: AppColors.primary,
+                              isSelected: _selectedFollowedIndex == null,
+                              onTap: () => _selectFollowed(null),
+                            ),
+                            ...List.generate(followedPinplers.length, (i) {
+                              final p = followedPinplers[i];
+                              return _FollowedAvatar(
+                                label: p.name,
+                                emoji: p.emoji,
+                                color: p.color,
+                                isSelected: _selectedFollowedIndex == i,
+                                onTap: () => _selectFollowed(i),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
                     // 카테고리 칩 (길찾기 중 숨김)
                     if (!_isNavigating && !_navLoading)
                       SingleChildScrollView(
@@ -706,36 +836,6 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          // ── "나의 발톱 자국" 칩 ──
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3))],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('🐾', style: const TextStyle(fontSize: 14)),
-                        const SizedBox(width: 5),
-                        Text('나의 발톱 자국',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: TigoColors.brown)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
           // ── 하단 통계 카드 ──
           if (_travelStats != null)
             Positioned(
@@ -828,6 +928,74 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(width: 1, height: 32, color: const Color(0xFFEEEEEE));
+  }
+}
+
+// ──────────────────────────────────────────────
+// 팔로우 지도 아바타 스트립 항목 ("나" 또는 팔로우한 핀플러 한 명)
+// ──────────────────────────────────────────────
+class _FollowedAvatar extends StatelessWidget {
+  final String label;
+  final String emoji;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FollowedAvatar({
+    required this.label,
+    required this.emoji,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: SizedBox(
+          width: 56,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 50, height: 50,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.neutral900 : Colors.white,
+                    width: isSelected ? 2.5 : 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isSelected ? 0.20 : 0.10),
+                      blurRadius: isSelected ? 10 : 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  color: isSelected ? AppColors.neutral900 : AppColors.neutral500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
