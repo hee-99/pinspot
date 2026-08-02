@@ -705,7 +705,7 @@ class _MapScreenState extends State<MapScreen> {
                     // 팔로우한 핀플러 아바타 스트립 (토글 on일 때만)
                     if (_showFollowed)
                       SizedBox(
-                        height: 78,
+                        height: 86,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
