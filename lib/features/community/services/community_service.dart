@@ -130,22 +130,6 @@ class CommunityService {
     }).whereType<PinModel>().toList();
   }
 
-  // 내가 참여 중인 모든 커뮤니티의 핀을 모아 최신순으로 정렬 (팔로잉 탭 피드용, 중복 핀 제거)
-  static Future<List<({PinModel pin, CommunityModel community})>> getJoinedCommunityPins() async {
-    final communities = await getCommunities();
-    final joined = communities.where((c) => c.isJoined).toList();
-    final seenIds = <String>{};
-    final result = <({PinModel pin, CommunityModel community})>[];
-    for (final community in joined) {
-      for (final pin in await getCommunityPins(community.id)) {
-        if (seenIds.add(pin.id)) {
-          result.add((pin: pin, community: community));
-        }
-      }
-    }
-    result.sort((a, b) => b.pin.createdAt.compareTo(a.pin.createdAt));
-    return result;
-  }
 
   // 내가 만든 커뮤니티를 삭제하고 참여 목록에서도 제거
   static Future<void> deleteCommunity(String id) async {

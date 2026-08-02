@@ -42,36 +42,19 @@ const _kCategories = [
 // 발견 탭에 노출되는 지도 컬렉션 카드의 데이터 모델
 class _DiscoverMap {
   final String emoji, name, creator;
-  final int pinCount, likes;
+  final int pinCount, likes, photoCount;
   final Color color;
-  const _DiscoverMap({required this.emoji, required this.name, required this.creator, required this.pinCount, required this.likes, required this.color});
+  const _DiscoverMap({required this.emoji, required this.name, required this.creator, required this.pinCount, required this.likes, required this.photoCount, required this.color});
 }
 
 // 서버 연동 전 임시 하드코딩된 발견 탭 목업 데이터
 const _discoverMaps = [
-  _DiscoverMap(emoji: '🥐', name: '서울 소금빵\n지도', creator: '@breadlover', pinCount: 21, likes: 2341, color: Color(0xFFF59E0B)),
-  _DiscoverMap(emoji: '🌊', name: '한강 피크닉\n스팟', creator: '@riverside', pinCount: 15, likes: 1823, color: Color(0xFF0EA5E9)),
-  _DiscoverMap(emoji: '📸', name: '을지로 사진\n명소', creator: '@lensexplorer', pinCount: 12, likes: 1204, color: Color(0xFFEC4899)),
-  _DiscoverMap(emoji: '🏔', name: '북한산 등산\n코스', creator: '@mountainking', pinCount: 34, likes: 987, color: Color(0xFF16A34A)),
-  _DiscoverMap(emoji: '☕', name: '홍대 카페\n투어', creator: '@cafeholic', pinCount: 28, likes: 876, color: Color(0xFF92400E)),
-  _DiscoverMap(emoji: '🧇', name: '와플 맛집\n지도', creator: '@wafflelover', pinCount: 18, likes: 756, color: Color(0xFFF472B6)),
-];
-
-// ─── 활동 데이터 ───────────────────────────────────────────────────────────────
-// 팔로잉 탭 활동 스트림 카드의 데이터 모델
-class _ActivityItem {
-  final String userName, handle, mapEmoji, mapName, timeAgo, actionType;
-  final Color avatarColor;
-  final List<String> newPins;
-  const _ActivityItem({required this.userName, required this.handle, required this.avatarColor, required this.mapEmoji, required this.mapName, required this.newPins, required this.timeAgo, required this.actionType});
-}
-
-// 서버 연동 전 임시 하드코딩된 팔로잉 활동 목업 데이터
-const _activityItems = [
-  _ActivityItem(userName: '산악대장', handle: '@mountainking', avatarColor: Color(0xFF4CAF50), mapEmoji: '🏔', mapName: '서울 등산 코스', newPins: ['북한산 백운대 정상', '숨겨진 약수터'], timeAgo: '23분 전', actionType: 'added'),
-  _ActivityItem(userName: '렌즈탐험가', handle: '@lensexplorer', avatarColor: Color(0xFFFF9800), mapEmoji: '📸', mapName: '을지로 사진 명소', newPins: ['골목 벽화', '빈티지 카페 거리'], timeAgo: '1시간 전', actionType: 'created'),
-  _ActivityItem(userName: '트레일러버', handle: '@traillover', avatarColor: Color(0xFF2196F3), mapEmoji: '🌿', mapName: '수도권 트레일', newPins: ['수락산 철모바위'], timeAgo: '3시간 전', actionType: 'added'),
-  _ActivityItem(userName: '새벽산행러', handle: '@dawnhiker', avatarColor: Color(0xFF9C27B0), mapEmoji: '🌅', mapName: '서울 일출 명소', newPins: ['관악산 일출 포인트', '남산 타워 뷰'], timeAgo: '5시간 전', actionType: 'shared'),
+  _DiscoverMap(emoji: '🥐', name: '서울 소금빵\n지도', creator: '@breadlover', pinCount: 21, likes: 2341, photoCount: 15, color: Color(0xFFF59E0B)),
+  _DiscoverMap(emoji: '🌊', name: '한강 피크닉\n스팟', creator: '@riverside', pinCount: 15, likes: 1823, photoCount: 9, color: Color(0xFF0EA5E9)),
+  _DiscoverMap(emoji: '📸', name: '을지로 사진\n명소', creator: '@lensexplorer', pinCount: 12, likes: 1204, photoCount: 8, color: Color(0xFFEC4899)),
+  _DiscoverMap(emoji: '🏔', name: '북한산 등산\n코스', creator: '@mountainking', pinCount: 34, likes: 987, photoCount: 22, color: Color(0xFF16A34A)),
+  _DiscoverMap(emoji: '☕', name: '홍대 카페\n투어', creator: '@cafeholic', pinCount: 28, likes: 876, photoCount: 17, color: Color(0xFF92400E)),
+  _DiscoverMap(emoji: '🧇', name: '와플 맛집\n지도', creator: '@wafflelover', pinCount: 18, likes: 756, photoCount: 11, color: Color(0xFFF472B6)),
 ];
 
 // ─── 피드 포스트 데이터 (상세 화면용) ─────────────────────────────────────────
@@ -105,7 +88,6 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> with TickerProviderStateMixin {
   late TabController _tabCtrl;
   List<CommunityModel> _communities = [];
-  List<({PinModel pin, CommunityModel community})> _communityPins = [];
   List<PinModel> _savedPins = [];
   bool _loading = true;
   int _selectedCategoryIdx = 0;
@@ -118,7 +100,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   // 탭 컨트롤러 초기화 후 데이터 로드, 다른 화면에서 핀이 추가되면 자동 재로딩되도록 리스너 등록
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 2, vsync: this);
     _load();
     PinRefreshNotifier.instance.addListener(_load);
   }
@@ -132,14 +114,12 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     super.dispose();
   }
 
-  // 커뮤니티 목록, 참여 커뮤니티의 공유 핀, 내 저장 핀을 한번에 불러와 화면 상태 갱신
+  // 커뮤니티 목록, 내 저장 핀을 한번에 불러와 화면 상태 갱신
   Future<void> _load() async {
     final communities = await CommunityService.getCommunities();
-    final communityPins = await CommunityService.getJoinedCommunityPins();
     final savedPins = await PinService.getPins();
     if (mounted) setState(() {
       _communities = communities;
-      _communityPins = communityPins;
       _savedPins = savedPins;
       _loading = false;
     });
@@ -235,7 +215,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   @override
-  // 상단 앱바(검색 토글 포함) + 탭바 + 3개 탭 뷰(그룹/발견/팔로잉)로 구성된 화면 렌더링
+  // 상단 앱바(검색 토글 포함) + 탭바 + 2개 탭 뷰(그룹/발견)로 구성된 화면 렌더링
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
@@ -262,7 +242,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
               IconButton(icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 24), onPressed: _openCreate),
               const SizedBox(width: 6),
             ],
-            // 그룹/발견/팔로잉 3탭 전환용 탭바
+            // 그룹/발견 2탭 전환용 탭바
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(48),
               child: Container(
@@ -276,7 +256,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                   dividerColor: _kBg,
                   labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-                  tabs: const [Tab(text: '👥 그룹'), Tab(text: '✨ 발견'), Tab(text: '🔔 팔로잉')],
+                  tabs: const [Tab(text: '👥 그룹'), Tab(text: '✨ 발견')],
                 ),
               ),
             ),
@@ -296,7 +276,6 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
               onOpenDetail: _openDetail, onToggleJoin: _toggleJoin,
             ),
             _DiscoverTab(savedPins: _savedPins, pinsByCategory: _pinsByCategory),
-            _FollowingTab(communityPins: _communityPins),
           ],
         ),
       ),
@@ -522,65 +501,6 @@ class _GroupsTab extends StatelessWidget {
   );
 }
 
-// ─── 팔로잉 탭 ────────────────────────────────────────────────────────────────
-// 팔로잉한 핀플러의 활동 스트림과 커뮤니티 공유 핀을 보여주는 팔로잉 탭
-class _FollowingTab extends StatelessWidget {
-  final List<({PinModel pin, CommunityModel community})> communityPins;
-  const _FollowingTab({required this.communityPins});
-
-  @override
-  // 활동/공유 핀이 모두 없으면 빈 상태 안내, 있으면 활동 스트림 + 커뮤니티 공유 핀 목록 렌더링
-  Widget build(BuildContext context) {
-    final bool hasPins = communityPins.isNotEmpty;
-    final bool hasActivity = _activityItems.isNotEmpty;
-
-    if (!hasPins && !hasActivity) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('👥', style: TextStyle(fontSize: 48)),
-        const SizedBox(height: 16),
-        const Text('아직 팔로잉한 핀플러가 없어요', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kText2)),
-        const SizedBox(height: 8),
-        const Text('지도 탐험가를 팔로우하고\n그들의 여정을 함께 해보세요!', style: TextStyle(fontSize: 13, color: _kText3, height: 1.6), textAlign: TextAlign.center),
-      ]));
-    }
-
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 100),
-      children: [
-        // 활동 스트림
-        const _FollowingHeader(title: '팔로잉 활동'),
-        ..._activityItems.map((item) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: _ActivityCard(item: item),
-        )),
-
-        // 커뮤니티 공유 핀
-        if (hasPins) ...[
-          const _FollowingHeader(title: '커뮤니티 공유'),
-          ...communityPins.asMap().entries.map((e) => Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, e.key < communityPins.length - 1 ? 12 : 0),
-            child: _CommunityPinCard(pin: e.value.pin, community: e.value.community),
-          )),
-        ],
-      ],
-    );
-  }
-}
-
-// 팔로잉 탭 전용 섹션 제목 위젯 (더보기 버튼 없는 단순 버전)
-class _FollowingHeader extends StatelessWidget {
-  final String title;
-  const _FollowingHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-      child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _kText1)),
-    );
-  }
-}
-
 // ─── 섹션 헤더 ────────────────────────────────────────────────────────────────
 // 발견 탭에서 사용하는 "더보기" 링크 포함 섹션 제목 위젯
 class _SectionHeader extends StatelessWidget {
@@ -640,6 +560,10 @@ class _FeaturedMapCard extends StatelessWidget {
                 const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFEF4444)),
                 const SizedBox(width: 3),
                 Text(_fmt(map.likes), style: const TextStyle(fontSize: 11, color: _kText2, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                const Icon(Icons.photo_camera_outlined, size: 11, color: _kText2),
+                const SizedBox(width: 3),
+                Text('${map.photoCount}장', style: const TextStyle(fontSize: 11, color: _kText2, fontWeight: FontWeight.w600)),
               ]),
               const SizedBox(height: 5),
               Text(map.creator, style: const TextStyle(fontSize: 11, color: _kText2)),
@@ -687,6 +611,10 @@ class _DiscoverMapCard extends StatelessWidget {
               Row(children: [
                 Text(map.creator, style: const TextStyle(fontSize: 10, color: _kText2)),
                 const Spacer(),
+                const Icon(Icons.photo_camera_outlined, size: 10, color: _kText2),
+                const SizedBox(width: 2),
+                Text('${map.photoCount}', style: const TextStyle(fontSize: 10, color: _kText2, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 6),
                 const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFEF4444)),
                 const SizedBox(width: 3),
                 Text(_fmt(map.likes), style: const TextStyle(fontSize: 11, color: _kText2, fontWeight: FontWeight.w600)),
@@ -963,195 +891,6 @@ class _ExploreCard extends StatelessWidget {
   }
 }
 
-// ─── 팔로잉 위젯 ──────────────────────────────────────────────────────────────
-// 팔로잉 활동 스트림의 개별 활동 카드 (핀 추가/지도 생성/공유 등)
-class _ActivityCard extends StatelessWidget {
-  final _ActivityItem item;
-  const _ActivityCard({required this.item});
-
-  // 활동 타입(actionType)에 따라 표시할 설명 문구를 결정
-  String get _actionText { switch (item.actionType) { case 'created': return '새 지도를 만들었어요'; case 'shared': return '커뮤니티에 공유했어요'; default: return '지도에 핀을 추가했어요'; } }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16), decoration: _cardDeco(),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          CircleAvatar(radius: 18, backgroundColor: item.avatarColor, child: Text(item.userName[0], style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700))),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item.userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kText1)),
-            Text(item.handle, style: const TextStyle(fontSize: 11, color: _kText2)),
-          ])),
-          Text(item.timeAgo, style: const TextStyle(fontSize: 11, color: _kText3)),
-        ]),
-        const SizedBox(height: 12),
-        RichText(text: TextSpan(
-          style: const TextStyle(fontSize: 13, color: _kText2, height: 1.45),
-          children: [
-            TextSpan(text: '${item.mapEmoji} '),
-            TextSpan(text: '"${item.mapName}"', style: const TextStyle(fontWeight: FontWeight.w700, color: _kText1)),
-            TextSpan(text: ' $_actionText'),
-          ],
-        )),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 6, runSpacing: 6,
-          children: item.newPins.map((pin) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.location_on, size: 11, color: AppColors.primary),
-              const SizedBox(width: 3),
-              Text(pin, style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ]),
-          )).toList(),
-        ),
-        const SizedBox(height: 12),
-        Row(children: [
-          const Spacer(),
-          GestureDetector(
-            onTap: () {},
-            child: const Row(children: [
-              Text('지도 보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-              SizedBox(width: 2),
-              Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
-            ]),
-          ),
-        ]),
-      ]),
-    );
-  }
-}
-
-// 커뮤니티에서 공유된 핀을 보여주는 카드 — 탭하면 저장 핀 상세 화면으로 이동
-class _CommunityPinCard extends StatelessWidget {
-  final PinModel pin;
-  final CommunityModel community;
-  const _CommunityPinCard({required this.pin, required this.community});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _SavedPinDetailScreen(pin: pin))),
-      child: Container(
-        padding: const EdgeInsets.all(14), decoration: _cardDeco(),
-        child: Row(children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: community.color.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Center(child: Text(community.emoji, style: const TextStyle(fontSize: 20)))),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(community.name, style: TextStyle(fontSize: 11, color: community.color, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 3),
-            TranslatableText(pin.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kText1), maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 3),
-            Text(pin.category, style: const TextStyle(fontSize: 11, color: _kText2)),
-          ])),
-          Icon(Icons.arrow_forward_ios_rounded, size: 13, color: _kText3),
-        ]),
-      ),
-    );
-  }
-}
-
-// ─── 저장 핀 상세 화면 ─────────────────────────────────────────────────────────
-// 커뮤니티 공유 핀을 탭했을 때 보여주는, 내가 저장한 핀 기준 상세 화면
-class _SavedPinDetailScreen extends StatefulWidget {
-  final PinModel pin;
-  const _SavedPinDetailScreen({required this.pin});
-  @override
-  State<_SavedPinDetailScreen> createState() => _SavedPinDetailScreenState();
-}
-
-// _SavedPinDetailScreen 상태 — 지도 스타일, AI 랜드마크 정보 로딩 상태 관리
-class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
-  final _mapCtrl = Completer<GoogleMapController>();
-  LandmarkInfo? _landmarkInfo;
-  bool _isLoadingInfo = true;
-  String? _mapStyle;
-
-  @override
-  // 진입 시 AI 랜드마크 정보와 커스텀 지도 스타일을 병렬로 로드
-  void initState() { super.initState(); _loadLandmarkInfo(); _loadMapStyle(); }
-
-  // 구글맵 커스텀 스타일 JSON 에셋 로드
-  Future<void> _loadMapStyle() async {
-    try { final style = await rootBundle.loadString('assets/map_style.json'); if (mounted) setState(() => _mapStyle = style); } catch (_) {}
-  }
-
-  // Claude AI를 통해 이 핀 위치의 유래/명소/방문 팁 등 정보를 가져옴
-  Future<void> _loadLandmarkInfo() async {
-    final info = await LandmarkInfoService.fetchInfo(placeName: widget.pin.title, lat: widget.pin.lat, lng: widget.pin.lng);
-    if (mounted) setState(() { _landmarkInfo = info; _isLoadingInfo = false; });
-  }
-
-  // 구글 지도 앱(웹)으로 길찾기 연동
-  Future<void> _openNavigation() async {
-    final uri = Uri.parse('https://maps.google.com/?daddr=${widget.pin.lat},${widget.pin.lng}&directionsmode=driving');
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  // 핀 정보를 외부 앱으로 공유
-  void _share() => Share.share('📍 ${widget.pin.title} (${widget.pin.category})\nhttps://maps.google.com/?q=${widget.pin.lat},${widget.pin.lng}', subject: widget.pin.title);
-
-  @override
-  // 상단 지도 히어로 영역 + 핀 정보(제목/좌표/설명/사진) + AI 정보 위젯 + 길찾기/공유 버튼으로 구성
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final pin = widget.pin;
-    return Scaffold(
-      backgroundColor: AppColors.neutral50,
-      body: CustomScrollView(slivers: [
-        SliverAppBar(
-          expandedHeight: 260, pinned: true,
-          backgroundColor: AppColors.surface, foregroundColor: AppColors.neutral900, elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(background: GoogleMap(
-            initialCameraPosition: CameraPosition(target: LatLng(pin.lat, pin.lng), zoom: 15),
-            onMapCreated: _mapCtrl.complete, zoomControlsEnabled: false, myLocationButtonEnabled: false,
-            scrollGesturesEnabled: false, zoomGesturesEnabled: false, style: _mapStyle,
-            markers: {Marker(markerId: const MarkerId('dest'), position: LatLng(pin.lat, pin.lng), icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen))},
-          )),
-        ),
-        SliverToBoxAdapter(child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.location_on, size: 13, color: AppColors.primary), SizedBox(width: 4), Text('MY PIN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary))])),
-              const Spacer(),
-              Text(_timeAgo(pin.createdAt, context), style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
-            ]),
-            const SizedBox(height: 16),
-            TranslatableText(pin.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Row(children: [
-              const Icon(Icons.location_on, size: 14, color: AppColors.primary),
-              const SizedBox(width: 3),
-              Expanded(child: Text('${pin.lat.toStringAsFixed(4)}, ${pin.lng.toStringAsFixed(4)}', style: const TextStyle(fontSize: 13, color: AppColors.neutral500))),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: Text(pin.category, style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600))),
-            ]),
-            if (pin.description.isNotEmpty) ...[const SizedBox(height: 16), TranslatableText(pin.description, style: const TextStyle(fontSize: 14, color: AppColors.neutral500, height: 1.6))],
-            if (pin.photoPath != null && !kIsWeb) ...[const SizedBox(height: 16), ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(pin.photoPath!), width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()))],
-            const SizedBox(height: 20),
-            _LandmarkInfoWidget(isLoading: _isLoadingInfo, info: _landmarkInfo, onRefresh: _loadLandmarkInfo),
-            const SizedBox(height: 28),
-            Row(children: [
-              Expanded(child: ElevatedButton.icon(onPressed: _openNavigation, icon: const Icon(Icons.navigation, size: 18, color: Colors.white),
-                label: Text(l.directions, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0))),
-              const SizedBox(width: 10),
-              Container(height: 50, width: 50, decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.neutral200)),
-                child: IconButton(onPressed: _share, icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20))),
-            ]),
-          ]),
-        )),
-      ]),
-    );
-  }
-}
-
 // ─── 핀 상세 화면 (발견 탭) ────────────────────────────────────────────────────
 // 발견 탭에서 지도 카드를 탭했을 때 보여주는, 목업 피드 포스트 기준 상세 화면
 class _PinDetailScreen extends StatefulWidget {
@@ -1397,5 +1136,3 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 // 1000 이상 숫자를 "1.2k" 형태로 축약 표시 (그룹 탭 카드에서 사용)
 String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
-// 날짜를 현지화된 "n분 전"류 상대 시간 문자열로 변환
-String _timeAgo(DateTime dt, BuildContext context) => AppLocalizations.of(context).timeAgo(dt);
