@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+// 구글 번역 비공식 API를 이용해 한국어 텍스트를 다른 언어로 번역하고 캐싱하는 서비스
 class TranslationService {
   // In-memory cache for the current session
   static final Map<String, String> _memCache = {};
@@ -77,6 +78,7 @@ class TranslationService {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
+  // 번역할 필요가 없는 텍스트(숫자/좌표, 매우 짧은 문자열, 이미 영문인 경우)인지 판별
   static bool _skipTranslation(String text, String targetLang) {
     // Pure numbers / coordinates
     if (RegExp(r"""^[\d.,\s\-+:/°'"]+$""").hasMatch(text)) return true;
@@ -87,6 +89,7 @@ class TranslationService {
     return false;
   }
 
+  // 텍스트에 한글 유니코드 범위(가~힣) 문자가 포함되어 있는지 확인
   static bool _hasKorean(String text) =>
       text.runes.any((r) => r >= 0xAC00 && r <= 0xD7A3);
 }

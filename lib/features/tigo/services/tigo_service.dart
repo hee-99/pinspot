@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/models/pin_model.dart';
-import '../data/tigo_items.dart';
-import '../models/tigo_model.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/features/tigo/data/tigo_items.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
 
+// 티고 아바타 꾸미기 상태(업로드 카운트, 해금/장착 아이템)를 관리하는 싱글톤 서비스
 class TigoService extends ChangeNotifier {
   static final instance = TigoService._();
   TigoService._();
@@ -31,6 +32,7 @@ class TigoService extends ChangeNotifier {
     return items;
   }
 
+  // SharedPreferences에서 저장된 티고 상태(업로드 수/해금/장착)를 불러옴
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final count = prefs.getInt(_kUploadCount) ?? 0;
@@ -62,6 +64,7 @@ class TigoService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 핀 업로드 시 호출 — 업로드 카운트를 늘리고 새로 해금된 아이템을 반환
   Future<List<TigoItem>> incrementUploadCount() async {
     final prefs = await SharedPreferences.getInstance();
     final newCount = _state.uploadCount + 1;
@@ -89,6 +92,7 @@ class TigoService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 아이템을 장착/해제 토글 (같은 슬롯에 이미 장착돼 있으면 해제, 아니면 장착)
   Future<void> toggleEquip(String itemId) async {
     final item = tigoItemById(itemId);
     if (item == null) return;
@@ -138,6 +142,7 @@ class TigoService extends ChangeNotifier {
   }
 
   /// Computes travel stats from the given pin list.
+  // 핀 목록으로부터 방문 도시 수/발자취/사진 수 통계를 계산
   static TravelStats computeStats(List<PinModel> pins) {
     return TravelStats(
       visitedCities: _countCities(pins),
@@ -146,6 +151,7 @@ class TigoService extends ChangeNotifier {
     );
   }
 
+  // 반경 50km 이내 핀들을 같은 도시로 묶어서 방문 도시 수를 계산
   static int _countCities(List<PinModel> pins) {
     if (pins.isEmpty) return 0;
     const double radiusKm = 50.0;
@@ -165,6 +171,7 @@ class TigoService extends ChangeNotifier {
     return count;
   }
 
+  // 두 좌표 간 거리를 하버사인 공식으로 계산 (km 단위)
   static double _distKm(double lat1, double lng1, double lat2, double lng2) {
     const r = 6371.0;
     final a = lat1 * (math.pi / 180);

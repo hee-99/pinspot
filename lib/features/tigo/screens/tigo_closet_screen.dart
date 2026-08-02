@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/tigo_colors.dart';
-import '../../../core/services/pin_service.dart';
-import '../data/tigo_items.dart';
-import '../models/tigo_model.dart';
-import '../services/tigo_service.dart';
-import '../services/tigo_purchase_service.dart';
-import '../widgets/tigo_avatar.dart';
+import 'package:pinspot/design/theme/tigo_colors.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
+import 'package:pinspot/features/tigo/data/tigo_items.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
+import 'package:pinspot/features/tigo/services/tigo_purchase_service.dart';
+import 'package:pinspot/features/tigo/widgets/tigo_avatar.dart';
 
+// 슬롯별 탭에 표시할 한글 라벨
 const _kSlotLabels = {
   TigoSlot.hat: '모자',
   TigoSlot.outfit: '옷',
@@ -16,6 +17,7 @@ const _kSlotLabels = {
   TigoSlot.skin: '스킨',
 };
 
+// 티고 도감/꾸미기 화면 진입점 — 슬롯별 탭으로 아이템을 보여줌
 class TigoClosetScreen extends StatefulWidget {
   const TigoClosetScreen({super.key});
 
@@ -23,6 +25,7 @@ class TigoClosetScreen extends StatefulWidget {
   State<TigoClosetScreen> createState() => _TigoClosetScreenState();
 }
 
+// 도감 화면의 상태 관리 — 탭 컨트롤러, 티고 서비스 변경 구독, 여행 통계 로드
 class _TigoClosetScreenState extends State<TigoClosetScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
@@ -32,6 +35,7 @@ class _TigoClosetScreenState extends State<TigoClosetScreen>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: TigoSlot.values.length, vsync: this);
+    // 아이템 해금/장착 상태가 바뀌면 화면을 다시 그리도록 구독
     TigoService.instance.addListener(_onServiceChange);
     _loadStats();
   }
@@ -43,10 +47,12 @@ class _TigoClosetScreenState extends State<TigoClosetScreen>
     super.dispose();
   }
 
+  // 티고 서비스 상태 변경 시 화면 갱신
   void _onServiceChange() {
     if (mounted) setState(() {});
   }
 
+  // 저장된 핀 목록으로부터 여행 통계(도시/발자국/사진 수)를 계산해 로드
   Future<void> _loadStats() async {
     final pins = await PinService.getPins();
     if (mounted) {
@@ -62,11 +68,14 @@ class _TigoClosetScreenState extends State<TigoClosetScreen>
       body: SafeArea(
         child: Column(
           children: [
+            // 상단 헤더: 티고 아바타 + 통계 + 다음 해금까지 진행도
             _TigoHeader(state: state, stats: _stats),
+            // 슬롯(모자/옷/가방 등) 선택 탭바
             _SlotTabBar(controller: _tabCtrl),
             Expanded(
               child: TabBarView(
                 controller: _tabCtrl,
+                // 슬롯별 아이템 그리드를 탭 개수만큼 생성
                 children: TigoSlot.values.map((slot) {
                   return _SlotGrid(slot: slot, state: state);
                 }).toList(),
@@ -80,6 +89,7 @@ class _TigoClosetScreenState extends State<TigoClosetScreen>
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
+// 화면 상단 헤더 — 제목, 업로드 뱃지, 티고 아바타, 통계, 다음 아이템 진행바
 class _TigoHeader extends StatelessWidget {
   final TigoState state;
   final TravelStats? stats;
@@ -92,6 +102,7 @@ class _TigoHeader extends StatelessWidget {
       color: TigoColors.cream,
       child: Column(
         children: [
+          // 제목 + 누적 업로드 장수 뱃지
           Row(
             children: [
               Text(
@@ -107,6 +118,7 @@ class _TigoHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // 현재 장착 아이템이 반영된 티고 아바타 + 인사말/통계
           Row(
             children: [
               TigoAvatar(size: 120, equipped: state.equipped),
@@ -140,6 +152,7 @@ class _TigoHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // 다음 무료 해금 아이템까지 남은 진행도 표시
           _ProgressBar(
             count: state.uploadCount,
             nextThreshold: _nextThreshold(state),
@@ -150,6 +163,7 @@ class _TigoHeader extends StatelessWidget {
     );
   }
 
+  // 프리미엄이 아닌 아이템 중 아직 해금되지 않은 가장 낮은 임계값을 찾음 (없으면 -1)
   int _nextThreshold(TigoState state) {
     for (final item in kTigoItems) {
       if (item.isPremium) continue;
@@ -159,6 +173,7 @@ class _TigoHeader extends StatelessWidget {
   }
 }
 
+// 누적 업로드 사진 장수를 보여주는 뱃지
 class _UploadBadge extends StatelessWidget {
   final int count;
   const _UploadBadge({required this.count});
@@ -186,6 +201,7 @@ class _UploadBadge extends StatelessWidget {
   }
 }
 
+// 방문 도시/발자국/사진 수를 나열하는 통계 행
 class _StatsRow extends StatelessWidget {
   final TravelStats stats;
   const _StatsRow({required this.stats});
@@ -204,6 +220,7 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
+// 통계 항목 하나(값 + 라벨)를 표시하는 작은 칩
 class _StatChip extends StatelessWidget {
   final String label, value;
   const _StatChip({required this.label, required this.value});
@@ -219,6 +236,7 @@ class _StatChip extends StatelessWidget {
   }
 }
 
+// 다음 무료 아이템 해금까지의 진행률 바 (모두 획득 시 완료 알약 표시)
 class _ProgressBar extends StatelessWidget {
   final int count;
   final int nextThreshold;
@@ -226,10 +244,12 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 다음 임계값이 없으면(-1) 모든 무료 아이템을 이미 획득한 것
     if (nextThreshold == -1) {
       return _pill('모든 아이템 획득 완료! 🎉');
     }
 
+    // 이전 임계값 대비 현재 업로드 수의 비율로 진행률 계산
     final prevThreshold = _prevThreshold(count);
     final range = nextThreshold - prevThreshold;
     final progress = ((count - prevThreshold) / range).clamp(0.0, 1.0);
@@ -258,6 +278,7 @@ class _ProgressBar extends StatelessWidget {
     );
   }
 
+  // 현재 업로드 수보다 작거나 같은 임계값 중 가장 큰 값을 찾음(진행바 시작점)
   int _prevThreshold(int count) {
     final thresholds = kTigoItems.where((i) => !i.isPremium).map((i) => i.threshold).toList()..sort();
     int prev = 0;
@@ -268,6 +289,7 @@ class _ProgressBar extends StatelessWidget {
     return prev;
   }
 
+  // 완료 상태를 알약 모양 배지로 그려주는 헬퍼
   Widget _pill(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -281,6 +303,7 @@ class _ProgressBar extends StatelessWidget {
 }
 
 // ── Tab Bar ───────────────────────────────────────────────────────────────────
+// 슬롯(모자/옷/가방 등) 종류를 선택하는 스크롤 가능한 탭바
 class _SlotTabBar extends StatelessWidget {
   final TabController controller;
   const _SlotTabBar({required this.controller});
@@ -308,6 +331,7 @@ class _SlotTabBar extends StatelessWidget {
 }
 
 // ── Slot Grid ─────────────────────────────────────────────────────────────────
+// 선택된 슬롯에 속한 아이템들을 그리드로 보여주는 위젯
 class _SlotGrid extends StatelessWidget {
   final TigoSlot slot;
   final TigoState state;
@@ -315,6 +339,7 @@ class _SlotGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 현재 슬롯에 속한 아이템만 필터링 후 임계값(획득 조건) 오름차순 정렬
     final items = kTigoItems.where((i) => i.slot == slot).toList()
       ..sort((a, b) => a.threshold.compareTo(b.threshold));
 
@@ -337,6 +362,8 @@ class _SlotGrid extends StatelessWidget {
         final item = items[i];
         final unlocked = state.unlockedItemIds.contains(item.id);
         final isEquipped = state.equipped[item.slot] == item.id;
+        // 해금된 아이템은 탭 시 장착/해제 토글, 잠긴 프리미엄 아이템은 구매 다이얼로그,
+        // 잠긴 무료 아이템은 탭 불가(onTap == null)로 처리
         VoidCallback? onTap;
         if (unlocked) {
           onTap = () => TigoService.instance.toggleEquip(item.id);
@@ -354,7 +381,9 @@ class _SlotGrid extends StatelessWidget {
     );
   }
 
+  // 프리미엄 아이템 구매 확인 다이얼로그 — 실제 스토어 상품 여부에 따라 안내 문구를 다르게 보여줌
   void _showPurchaseDialog(BuildContext context, TigoItem item) {
+    // 스토어에 등록된 실제 상품이 있으면 해당 가격을, 없으면 앱에 정의된 기본 가격을 사용
     final product = TigoPurchaseService.instance.productFor(item);
     final priceLabel = product?.price ?? '₩${item.priceKrw}';
     final isRealStore = product != null;
@@ -380,6 +409,7 @@ class _SlotGrid extends StatelessWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
+            // 구매 버튼 클릭 시 실제 인앱결제를 시도하고, 실패하면 개발용 폴백으로 해금
             onPressed: () async {
               Navigator.pop(ctx);
               final started = await TigoPurchaseService.instance.buy(item);
@@ -397,6 +427,7 @@ class _SlotGrid extends StatelessWidget {
   }
 }
 
+// 아이템 하나를 나타내는 카드 — 해금/장착/잠금/구매 상태에 따라 다르게 표시
 class _ItemCard extends StatelessWidget {
   final TigoItem item;
   final bool unlocked;
@@ -463,6 +494,7 @@ class _ItemCard extends StatelessWidget {
                       color: unlocked ? TigoColors.brown : TigoColors.locked,
                     ),
                   ),
+                  // 잠긴 아이템은 프리미엄이면 가격을, 무료면 남은 필요 장수를 안내
                   if (!unlocked) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -475,6 +507,7 @@ class _ItemCard extends StatelessWidget {
                 ],
               ),
             ),
+            // 잠긴 아이템은 우측 상단에 구매(쇼핑백)/잠금 아이콘 표시
             if (!unlocked)
               Positioned(
                 top: 8, right: 8,
@@ -484,6 +517,7 @@ class _ItemCard extends StatelessWidget {
                   color: item.isPremium ? TigoColors.orange : TigoColors.locked,
                 ),
               ),
+            // 현재 장착 중인 아이템은 우측 상단에 체크 표시
             if (isEquipped)
               Positioned(
                 top: 8, right: 8,

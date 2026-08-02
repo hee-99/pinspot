@@ -5,21 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/l10n/app_localizations.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/models/landmark_info_model.dart';
-import '../../../core/models/pin_model.dart';
-import '../../../core/models/community_model.dart';
-import '../../../core/models/pin_rating_schema.dart';
-import '../../../core/services/category_service.dart';
-import '../../../core/services/community_service.dart';
-import '../../../core/services/landmark_info_service.dart';
-import '../../../core/services/pin_service.dart';
-import '../../tigo/services/tigo_service.dart';
-import '../../tigo/widgets/tigo_unlock_dialog.dart';
+import 'package:pinspot/core/l10n/app_localizations.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/core/models/landmark_info_model.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/core/models/community_model.dart';
+import 'package:pinspot/core/models/pin_rating_schema.dart';
+import 'package:pinspot/core/services/category_service.dart';
+import 'package:pinspot/features/community/services/community_service.dart';
+import 'package:pinspot/features/map/services/landmark_info_service.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
+import 'package:pinspot/features/tigo/widgets/tigo_unlock_dialog.dart';
 
+// 위치 인증 실패 사유 — GPS 미획득/EXIF 없음/거리 초과
 enum _FailReason { none, gps, exif, distance }
 
+// 핀 등록 화면 — 사진 선택 → 위치 인증 → 정보 입력 → 커뮤니티 공유 → 완료의 5단계 위저드
 class CreatePinScreen extends StatefulWidget {
   const CreatePinScreen({super.key});
 
@@ -28,8 +30,10 @@ class CreatePinScreen extends StatefulWidget {
 }
 
 class _CreatePinScreenState extends State<CreatePinScreen> {
+  // 사진 촬영 위치와 현재 위치 간 허용 최대 거리(미터)
   static const double _maxDistance = 500.0;
 
+  // 현재 위저드 단계 (0:사진선택 1:위치인증 2:정보입력 3:커뮤니티공유 4:완료)
   int _step = 0;
   PinModel? _savedPin;
 
@@ -56,11 +60,13 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     _loadCategories();
   }
 
+  // 저장된 카테고리 목록을 불러옴
   Future<void> _loadCategories() async {
     final cats = await CategoryService.getCategories();
     if (mounted) setState(() { _categories = cats; _categoriesLoaded = true; });
   }
 
+  // 사용자가 입력한 새 카테고리를 추가하고 목록 갱신
   Future<void> _addNewCategory(String name) async {
     await CategoryService.addCategory(name);
     await _loadCategories();
@@ -73,6 +79,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     super.dispose();
   }
 
+  // GPS 권한 요청 및 현재 위치 획득 (서비스 꺼짐/권한 거부 시 null)
   Future<Position?> _getCurrentPosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return null;
@@ -87,6 +94,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     );
   }
 
+  // EXIF에서 GPS 좌표 추출 — 사진 파일에 위치 태그가 있으면 위도/경도 반환
   Future<({double lat, double lng})?> _extractExifLocation(String path) async {
     if (kIsWeb) return null;
     final bytes = await File(path).readAsBytes();
@@ -99,6 +107,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     final lngRef = tags['GPS GPSLongitudeRef'];
     if (latTag == null || lngTag == null) return null;
 
+    // 도/분/초(DMS) 형식의 EXIF 좌표를 10진수 좌표로 변환
     double dmsToDecimal(IfdTag tag) {
       final parts = tag.values.toList();
       if (parts.length < 3) return 0;
@@ -110,12 +119,14 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 
     double lat = dmsToDecimal(latTag);
     double lng = dmsToDecimal(lngTag);
+    // 남반구/서반구는 부호를 반전
     if (latRef?.printable == 'S') lat = -lat;
     if (lngRef?.printable == 'W') lng = -lng;
 
     return (lat: lat, lng: lng);
   }
 
+  // 사진 선택(카메라/갤러리) 후 위치 인증 진행 — 카메라는 현재 GPS를 바로 신뢰, 갤러리는 EXIF와 현재 위치 거리 비교
   Future<void> _pickAndVerify(bool fromCamera) async {
     final l = AppLocalizations.of(context);
     final picker = ImagePicker();
@@ -144,6 +155,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       return;
     }
 
+    // 카메라로 즉시 촬영한 경우 EXIF 검증 없이 현재 GPS 위치를 그대로 사용
     if (fromCamera) {
       setState(() {
         _isVerifying = false;
@@ -168,6 +180,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
       return;
     }
 
+    // 갤러리 사진은 EXIF 촬영 위치와 현재 위치 간 거리를 계산해 위조 여부 검증
     final dist = Geolocator.distanceBetween(
       exifPos.lat, exifPos.lng,
       currentPos.latitude, currentPos.longitude,
@@ -189,6 +202,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     });
   }
 
+  // 입력값 검증 후 핀을 저장하고 티고 업로드 카운트 증가, 신규 잠금해제 아이템 있으면 다이얼로그 표시
   Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
     final desc = _descCtrl.text.trim();
@@ -231,6 +245,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     }
   }
 
+  // 선택한 커뮤니티들에 저장된 핀을 공유
   Future<void> _shareToCommunities(List<String> communityIds) async {
     if (_savedPin != null) {
       for (final id in communityIds) {
@@ -243,6 +258,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   bool _isValidLatLng(double lat, double lng) =>
       lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
+  // 단계별 위저드 화면을 AnimatedSwitcher로 전환하며 렌더링
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -309,6 +325,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   }
 }
 
+// 1단계: 사진 출처(카메라/갤러리) 선택 화면
 class _SourceStep extends StatelessWidget {
   final Future<void> Function(bool fromCamera) onPick;
   const _SourceStep({required this.onPick});
@@ -371,6 +388,7 @@ class _SourceStep extends StatelessWidget {
   }
 }
 
+// 카메라/갤러리 선택 카드 UI
 class _SourceCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -441,6 +459,7 @@ class _SourceCard extends StatelessWidget {
   }
 }
 
+// 2단계: 위치 인증 결과(성공/실패) 표시 및 재시도/설정 이동 액션 화면
 class _VerifyStep extends StatelessWidget {
   final XFile? file;
   final bool isVerifying;
@@ -665,6 +684,7 @@ class _VerifyStep extends StatelessWidget {
   }
 }
 
+// 3단계: 핀 제목/카테고리/설명 입력 + AI 랜드마크 정보 조회 화면
 class _InputStep extends StatefulWidget {
   final XFile? file;
   final List<String> categories;
@@ -706,6 +726,7 @@ class _InputStepState extends State<_InputStep> {
   LandmarkInfo? _aiInfo;
   bool _isLoadingAi = false;
 
+  // 입력한 장소명으로 AI(위키백과/Gemini) 랜드마크 정보를 조회
   Future<void> _fetchAiInfo() async {
     final l = AppLocalizations.of(context);
     final title = widget.titleCtrl.text.trim();
@@ -728,11 +749,13 @@ class _InputStepState extends State<_InputStep> {
     if (mounted) setState(() { _isLoadingAi = false; _aiInfo = info; });
   }
 
+  // AI가 제안한 설명을 설명 입력란에 채워넣음
   void _useAiDescription() {
     if (_aiInfo == null) return;
     widget.descCtrl.text = _aiInfo!.suggestedDescription;
   }
 
+  // 새 카테고리 이름을 입력받는 다이얼로그 표시
   void _showAddCategoryDialog() {
     final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
@@ -965,6 +988,7 @@ class _InputStepState extends State<_InputStep> {
 
 // ─── AI 장소 정보 섹션 ────────────────────────────────────────────────────────
 
+// AI 장소 정보 조회 버튼 + 결과 표시를 묶은 섹션
 class _AiInfoSection extends StatelessWidget {
   final bool isLoading;
   final LandmarkInfo? info;
@@ -1023,6 +1047,7 @@ class _AiInfoSection extends StatelessWidget {
   }
 }
 
+// AI가 조회한 랜드마크 정보(유래/볼거리/방문시기/팁)를 카드로 표시
 class _LandmarkInfoCard extends StatelessWidget {
   final LandmarkInfo info;
   final VoidCallback onUseDescription;
@@ -1135,6 +1160,7 @@ class _InfoRow extends StatelessWidget {
 
 // ─── 커뮤니티 공유 단계 ──────────────────────────────────────────────────────────
 
+// 4단계: 저장된 핀을 가입된 커뮤니티에 선택 공유하는 화면
 class _ShareStep extends StatefulWidget {
   final PinModel? pin;
   final Future<void> Function(List<String> communityIds) onShare;
@@ -1158,11 +1184,13 @@ class _ShareStepState extends State<_ShareStep> {
     _load();
   }
 
+  // 가입된 커뮤니티 목록만 필터링해 공유 대상으로 표시
   Future<void> _load() async {
     final all = await CommunityService.getCommunities();
     if (mounted) setState(() { _communities = all.where((c) => c.isJoined).toList(); _loading = false; });
   }
 
+  // 선택된 커뮤니티들에 핀 공유 실행
   Future<void> _share() async {
     setState(() => _sharing = true);
     await widget.onShare(_selected.toList());
@@ -1296,6 +1324,7 @@ class _ShareStepState extends State<_ShareStep> {
 
 // ─── 카테고리별 등급 입력 ─────────────────────────────────────────────────────────
 
+// 선택된 카테고리에 해당하는 평가 항목들을 모아 보여주는 섹션
 class _RatingSection extends StatelessWidget {
   final List<RatingDimension> dimensions;
   final Map<String, double> ratings;
@@ -1340,6 +1369,7 @@ class _RatingSection extends StatelessWidget {
   }
 }
 
+// 개별 평가 항목 한 줄 — 1~5단계 원형 선택 버튼
 class _RatingRow extends StatelessWidget {
   final RatingDimension dimension;
   final double? value;
@@ -1414,6 +1444,7 @@ class _RatingRow extends StatelessWidget {
     );
   }
 
+  // 평가 단계(1~5)에 따라 초록→빨강으로 변하는 색상 반환
   Color _levelColor(double val) {
     if (val <= 1) return const Color(0xFF16A34A);
     if (val <= 2) return const Color(0xFF65A30D);
@@ -1425,6 +1456,7 @@ class _RatingRow extends StatelessWidget {
 
 // ─── 완료 화면 ────────────────────────────────────────────────────────────────
 
+// 5단계: 핀 등록 완료 화면
 class _DoneStep extends StatelessWidget {
   final VoidCallback onClose;
   const _DoneStep({required this.onClose});

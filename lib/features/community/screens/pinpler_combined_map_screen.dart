@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/theme/app_theme.dart';
-import 'pinpler_ranking_screen.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/features/community/screens/pinpler_ranking_screen.dart';
 
+// 여러 핀플러의 핀을 한 지도에 겹쳐 보여주는 화면 (핀플별 색상 구분 + 토글로 표시/숨김)
 class PinplerCombinedMapScreen extends StatefulWidget {
   final List<PinplerData> pinplers;
   final String category;
@@ -22,6 +23,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   final Set<int> _hiddenIndexes = {};
 
+  // 특정 핀플러의 핀을 지도/범례에서 표시하거나 숨김
   void _togglePinpler(int index) {
     setState(() {
       if (_hiddenIndexes.contains(index)) {
@@ -32,6 +34,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
     });
   }
 
+  // 모든 핀플러의 핀 좌표 평균으로 지도 초기 중심점 계산
   LatLng get _center {
     final allPins = widget.pinplers.expand((p) => p.pins).toList();
     if (allPins.isEmpty) return const LatLng(37.5665, 126.9780);
@@ -40,6 +43,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
     return LatLng(lat, lng);
   }
 
+  // 숨겨지지 않은 핀플러들의 핀을 마커로 변환 (핀플러별 고유 색상 적용)
   Set<Marker> get _markers {
     final markers = <Marker>{};
     for (int i = 0; i < widget.pinplers.length; i++) {
@@ -57,6 +61,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
     return markers;
   }
 
+  // 마커 아이콘 색상 지정을 위해 Color를 HSL 색조(hue) 값으로 변환
   double _colorToHue(Color color) {
     final hslColor = HSLColor.fromColor(color);
     return hslColor.hue;
@@ -92,7 +97,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
       ),
       body: Column(
         children: [
-          // 핀플 토글 바
+          // 핀플 토글 바 — 탭하면 해당 핀플러의 핀을 지도에서 표시/숨김
           Container(
             color: AppTheme.surface,
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -142,7 +147,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
               ),
             ),
           ),
-          // 실제 Google Maps
+          // 실제 Google Maps — 표시 중인 핀플러들의 핀 마커 렌더링
           Expanded(
             child: GoogleMap(
               initialCameraPosition: CameraPosition(target: _center, zoom: 10.5),
@@ -152,7 +157,7 @@ class _PinplerCombinedMapScreenState extends State<PinplerCombinedMapScreen> {
               zoomControlsEnabled: true,
             ),
           ),
-          // 하단 범례
+          // 하단 범례 — 핀플러별 색상/이름/핀 개수 안내
           Container(
             color: AppTheme.surface,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),

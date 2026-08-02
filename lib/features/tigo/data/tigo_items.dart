@@ -1,5 +1,6 @@
-import '../models/tigo_model.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
 
+// 티고 꾸미기에서 사용 가능한 전체 아이템 목록 (기본 무료 아이템 + 프리미엄 구매 아이템)
 const List<TigoItem> kTigoItems = [
   TigoItem(
     id: 'camera_vintage',
@@ -59,6 +60,7 @@ const List<TigoItem> kTigoItems = [
   ),
 ];
 
+// id로 아이템을 찾되 없으면 null 반환
 TigoItem? tigoItemById(String id) {
   try {
     return kTigoItems.firstWhere((item) => item.id == id);
@@ -67,6 +69,7 @@ TigoItem? tigoItemById(String id) {
   }
 }
 
+// 인앱결제 상품 ID로 아이템을 찾되 없으면 null 반환
 TigoItem? tigoItemByProductId(String productId) {
   try {
     return kTigoItems.firstWhere((item) => item.productId == productId);

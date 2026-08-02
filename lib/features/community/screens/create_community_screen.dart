@@ -3,12 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/models/community_model.dart';
-import '../../../core/models/pinpler_tier.dart';
-import '../../../core/services/community_service.dart';
-import '../../../core/services/pin_service.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/core/models/community_model.dart';
+import 'package:pinspot/core/models/pinpler_tier.dart';
+import 'package:pinspot/features/community/services/community_service.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
 
+// 커뮤니티 생성 화면 위젯
 class CreateCommunityScreen extends StatefulWidget {
   const CreateCommunityScreen({super.key});
 
@@ -16,6 +17,7 @@ class CreateCommunityScreen extends StatefulWidget {
   State<CreateCommunityScreen> createState() => _CreateCommunityScreenState();
 }
 
+// CreateCommunityScreen 의 상태 클래스 - 폼 입력값 관리와 커뮤니티 생성 로직 처리
 class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -25,12 +27,14 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   bool _submitting = false;
   String? _customImagePath;
 
+  // 아이콘으로 선택 가능한 기본 이모티콘 목록
   static const _emojis = [
     '📍','🏔️','🌊','🌿','🏚️','📸','🌃','🗿','💧','🎨',
     '🍜','🎭','🏛️','🌸','🔦','🛤️','🏕️','🌋','🏖️','🎪',
     '🌆','🐾','🎸','⛺','🦋','🍁','🏄','🎯','🌈','🔥',
   ];
 
+  // 색상으로 선택 가능한 기본 색상 목록
   static const _colors = [
     0xFFFF7043, 0xFF4CAF50, 0xFF2196F3, 0xFF9C27B0,
     0xFFFF9800, 0xFF00BCD4, 0xFFE91E63, 0xFF795548,
@@ -39,6 +43,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     0xFF29B6F6, 0xFF8D6E63, 0xFF5C6BC0, 0xFF26C6DA,
   ];
 
+  // 텍스트 입력 컨트롤러 정리
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -46,6 +51,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     super.dispose();
   }
 
+  // 갤러리에서 커뮤니티 대표 이미지를 선택 (웹에서는 미지원)
   Future<void> _pickImage() async {
     if (kIsWeb) return;
     final file = await ImagePicker().pickImage(
@@ -53,6 +59,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     if (file != null && mounted) setState(() => _customImagePath = file.path);
   }
 
+  // 기본 목록에 없는 이모티콘을 직접 입력하는 다이얼로그 표시
   void _showCustomEmojiDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -93,6 +100,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     );
   }
 
+  // HEX 코드로 커스텀 색상을 직접 입력하는 다이얼로그 표시
   void _showCustomColorDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -134,15 +142,18 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     );
   }
 
+  // 입력값 검증 후 커뮤니티를 생성 - 핀플 등급별 생성 개수 제한을 확인하고 비공개면 참여 코드를 발급
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final desc = _descCtrl.text.trim();
     if (name.isEmpty) return;
 
+    // 보유 핀 개수로 핀플 등급을 계산해 커뮤니티 생성 가능 개수를 확인
     final pins = await PinService.getPins();
     final tier = PinplerTierX.fromPinCount(pins.length);
     final owned = (await CommunityService.getCommunities()).where((c) => c.isOwner).length;
     if (owned >= tier.communityCreateLimit) {
+      // 등급별 한도 초과 시 안내 다이얼로그만 표시하고 생성 중단
       if (!mounted) return;
       await _showLimitDialog(tier);
       return;
@@ -150,6 +161,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
     setState(() => _submitting = true);
 
+    // 비공개 커뮤니티인 경우에만 6자리 참여 코드를 생성
     final code = _isPrivate ? CommunityService.generateJoinCode() : null;
     final community = CommunityModel(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',
@@ -170,6 +182,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     await CommunityService.createCommunity(community);
 
     if (!mounted) return;
+    // 참여 코드가 발급된 경우 클립보드에 복사하고 코드 안내 다이얼로그를 보여줌
     if (code != null) {
       await Clipboard.setData(ClipboardData(text: code));
       if (!mounted) return;
@@ -182,6 +195,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     if (mounted) Navigator.pop(context, true);
   }
 
+  // 등급별 커뮤니티 생성 개수 한도를 초과했을 때 보여주는 안내 다이얼로그
   Future<void> _showLimitDialog(PinplerTier tier) async {
     await showDialog(
       context: context,
@@ -218,6 +232,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     );
   }
 
+  // 커뮤니티 생성 화면 UI 구성 - 이미지/이모티콘/색상 선택, 이름/소개 입력, 공개여부 설정 폼
   @override
   Widget build(BuildContext context) {
     final color = Color(_selectedColor);
@@ -239,6 +254,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 대표 이미지 미리보기 카드 - 탭하면 갤러리에서 이미지 선택
             // Preview card (tap to upload image)
             Center(
               child: GestureDetector(
@@ -287,6 +303,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               ),
             const SizedBox(height: 28),
 
+            // 이모티콘 선택 영역
             // Emoji picker
             Row(
               children: [
@@ -338,6 +355,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             ),
             const SizedBox(height: 28),
 
+            // 색상 선택 영역
             // Color picker
             Row(
               children: [
@@ -391,6 +409,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             ),
             const SizedBox(height: 28),
 
+            // 커뮤니티 이름 입력 필드
             // Name
             const Text('커뮤니티 이름', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
@@ -416,6 +435,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             ),
             const SizedBox(height: 20),
 
+            // 커뮤니티 소개 입력 필드
             // Description
             const Text('소개', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
@@ -469,6 +489,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 ],
               ),
             ),
+            // 비공개 선택 시 참여 코드 발급 예정 안내 문구 표시
             if (_isPrivate)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
@@ -485,6 +506,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               ),
             const SizedBox(height: 24),
 
+            // 커뮤니티 생성 제출 버튼 - 이름 미입력 또는 제출 중일 때 비활성화
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -513,6 +535,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   }
 }
 
+// 공개/비공개 옵션 한 항목을 보여주는 선택형 리스트 아이템 위젯
 class _VisibilityOption extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -578,6 +601,7 @@ class _VisibilityOption extends StatelessWidget {
   }
 }
 
+// 비공개 커뮤니티 생성 완료 후 발급된 참여 코드를 보여주는 다이얼로그
 class _CodeDialog extends StatelessWidget {
   final String code;
   final String communityName;
@@ -624,6 +648,7 @@ class _CodeDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // 코드를 다시 클립보드에 복사하고 완료 스낵바 표시
                   GestureDetector(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: code));

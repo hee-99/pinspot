@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/tigo_colors.dart';
-import '../../../core/models/pin_model.dart';
-import '../../../core/services/pin_service.dart';
-import '../../tigo/screens/tigo_closet_screen.dart';
+import 'package:pinspot/design/theme/app_colors.dart';
+import 'package:pinspot/design/theme/tigo_colors.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
+import 'package:pinspot/features/tigo/screens/tigo_closet_screen.dart';
 
+// 홈 탭 콘텐츠 화면 — 인사말, 티고 히어로 카드, 최근 핀 목록을 보여줌
 class HomeContentScreen extends StatefulWidget {
   const HomeContentScreen({super.key});
 
@@ -31,6 +32,7 @@ class _HomeContentScreenState extends State<HomeContentScreen> {
     super.dispose();
   }
 
+  // 저장된 핀을 최신순으로 정렬해 최근 10개만 표시
   Future<void> _loadPins() async {
     final pins = await PinService.getPins();
     pins.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -238,6 +240,7 @@ class _HomeContentScreenState extends State<HomeContentScreen> {
 }
 
 // ── 핀 리스트 아이템 ───────────────────────────────────────────────────────────
+// 최근 핀 목록의 개별 항목 — 썸네일 + 제목/카테고리/날짜/설명
 class _PinListItem extends StatelessWidget {
   final PinModel pin;
   const _PinListItem({required this.pin});
@@ -310,6 +313,7 @@ class _PinListItem extends StatelessWidget {
     );
   }
 
+  // 핀 사진 썸네일 빌드 (Web은 File API 미지원이라 플레이스홀더 사용)
   Widget _buildThumbnail() {
     if (pin.photoPath != null && !kIsWeb) {
       return Image.file(File(pin.photoPath!), fit: BoxFit.cover,
@@ -325,6 +329,7 @@ class _PinListItem extends StatelessWidget {
     );
   }
 
+  // 오늘/어제/N일 전/월일 형태로 상대 날짜 포맷팅
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);

@@ -6,17 +6,17 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/l10n/app_localizations.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/models/landmark_info_model.dart';
-import '../../../core/models/pin_model.dart';
-import '../../../core/models/community_model.dart';
-import '../../../core/services/community_service.dart';
-import '../../../core/services/landmark_info_service.dart';
-import '../../../core/services/pin_service.dart';
-import '../../../core/widgets/translatable_text.dart';
-import 'create_community_screen.dart';
-import 'community_detail_screen.dart';
+import 'package:pinspot/core/l10n/app_localizations.dart';
+import 'package:pinspot/design/theme/app_colors.dart';
+import 'package:pinspot/core/models/landmark_info_model.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/core/models/community_model.dart';
+import 'package:pinspot/features/community/services/community_service.dart';
+import 'package:pinspot/features/map/services/landmark_info_service.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
+import 'package:pinspot/design/widgets/translatable_text.dart';
+import 'package:pinspot/features/community/screens/create_community_screen.dart';
+import 'package:pinspot/features/community/screens/community_detail_screen.dart';
 
 // ─── 색상 토큰 ─────────────────────────────────────────────────────────────────
 const _kBg    = Color(0xFFF5F3EE);
@@ -25,6 +25,7 @@ const _kText1 = Color(0xFF1C1C1E);
 const _kText2 = Color(0xFF6B7280);
 const _kText3 = Color(0xFFC9C5BE);
 
+// 카드형 위젯 공통 배경/그림자 스타일 생성 헬퍼
 BoxDecoration _cardDeco({double radius = 20}) => BoxDecoration(
   color: _kCard,
   borderRadius: BorderRadius.circular(radius),
@@ -38,6 +39,7 @@ const _kCategories = [
 ];
 
 // ─── 발견 지도 데이터 ──────────────────────────────────────────────────────────
+// 발견 탭에 노출되는 지도 컬렉션 카드의 데이터 모델
 class _DiscoverMap {
   final String emoji, name, creator;
   final int pinCount, likes;
@@ -45,6 +47,7 @@ class _DiscoverMap {
   const _DiscoverMap({required this.emoji, required this.name, required this.creator, required this.pinCount, required this.likes, required this.color});
 }
 
+// 서버 연동 전 임시 하드코딩된 발견 탭 목업 데이터
 const _discoverMaps = [
   _DiscoverMap(emoji: '🥐', name: '서울 소금빵\n지도', creator: '@breadlover', pinCount: 21, likes: 2341, color: Color(0xFFF59E0B)),
   _DiscoverMap(emoji: '🌊', name: '한강 피크닉\n스팟', creator: '@riverside', pinCount: 15, likes: 1823, color: Color(0xFF0EA5E9)),
@@ -55,6 +58,7 @@ const _discoverMaps = [
 ];
 
 // ─── 활동 데이터 ───────────────────────────────────────────────────────────────
+// 팔로잉 탭 활동 스트림 카드의 데이터 모델
 class _ActivityItem {
   final String userName, handle, mapEmoji, mapName, timeAgo, actionType;
   final Color avatarColor;
@@ -62,6 +66,7 @@ class _ActivityItem {
   const _ActivityItem({required this.userName, required this.handle, required this.avatarColor, required this.mapEmoji, required this.mapName, required this.newPins, required this.timeAgo, required this.actionType});
 }
 
+// 서버 연동 전 임시 하드코딩된 팔로잉 활동 목업 데이터
 const _activityItems = [
   _ActivityItem(userName: '산악대장', handle: '@mountainking', avatarColor: Color(0xFF4CAF50), mapEmoji: '🏔', mapName: '서울 등산 코스', newPins: ['북한산 백운대 정상', '숨겨진 약수터'], timeAgo: '23분 전', actionType: 'added'),
   _ActivityItem(userName: '렌즈탐험가', handle: '@lensexplorer', avatarColor: Color(0xFFFF9800), mapEmoji: '📸', mapName: '을지로 사진 명소', newPins: ['골목 벽화', '빈티지 카페 거리'], timeAgo: '1시간 전', actionType: 'created'),
@@ -70,6 +75,7 @@ const _activityItems = [
 ];
 
 // ─── 피드 포스트 데이터 (상세 화면용) ─────────────────────────────────────────
+// 핀 상세 화면(_PinDetailScreen)에 전달되는 게시물 데이터 모델
 class _FeedPost {
   final String pinplerName, handle, location, district, category, timeAgo;
   final Color avatarColor;
@@ -78,6 +84,7 @@ class _FeedPost {
   const _FeedPost({required this.pinplerName, required this.handle, required this.avatarColor, required this.location, required this.district, required this.category, required this.timeAgo, required this.likes, required this.saves, required this.lat, required this.lng});
 }
 
+// 서버 연동 전 임시 하드코딩된 피드 포스트 목업 데이터
 const _allPosts = [
   _FeedPost(pinplerName: '산악대장', handle: '@mountainking', avatarColor: Color(0xFF4CAF50), location: '북한산 백운대 정상', district: '서울 강북구', category: '등산/명산', timeAgo: '23분 전', likes: 312, saves: 87, lat: 37.6558, lng: 126.9780),
   _FeedPost(pinplerName: '렌즈탐험가', handle: '@lensexplorer', avatarColor: Color(0xFFFF9800), location: '을지로 골목 벽화', district: '서울 중구', category: '사진 명소', timeAgo: '1시간 전', likes: 541, saves: 203, lat: 37.5663, lng: 126.9906),
@@ -87,12 +94,14 @@ const _allPosts = [
 ];
 
 // ─── 커뮤니티 화면 (3탭 통합) ─────────────────────────────────────────────────
+// 그룹/발견/팔로잉 3탭을 하나로 묶은 커뮤니티 화면 진입점
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
+// CommunityScreen의 상태 관리 — 탭 컨트롤러, 데이터 로딩, 검색/카테고리 필터 상태를 보유
 class _CommunityScreenState extends State<CommunityScreen> with TickerProviderStateMixin {
   late TabController _tabCtrl;
   List<CommunityModel> _communities = [];
@@ -106,6 +115,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   final _searchFocus = FocusNode();
 
   @override
+  // 탭 컨트롤러 초기화 후 데이터 로드, 다른 화면에서 핀이 추가되면 자동 재로딩되도록 리스너 등록
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
@@ -122,6 +132,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     super.dispose();
   }
 
+  // 커뮤니티 목록, 참여 커뮤니티의 공유 핀, 내 저장 핀을 한번에 불러와 화면 상태 갱신
   Future<void> _load() async {
     final communities = await CommunityService.getCommunities();
     final communityPins = await CommunityService.getJoinedCommunityPins();
@@ -134,6 +145,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     });
   }
 
+  // 저장된 핀들을 카테고리별로 그룹핑 (발견 탭 "내 지도 컬렉션" 표시용)
   Map<String, List<PinModel>> get _pinsByCategory {
     final map = <String, List<PinModel>>{};
     for (final pin in _savedPins) {
@@ -142,6 +154,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     return map;
   }
 
+  // 검색어와 선택된 카테고리 필터를 동시에 만족하는지 판단하는 필터링 로직
   bool _matchesCommunity(CommunityModel c) {
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -154,29 +167,36 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     return true;
   }
 
+  // 필터 조건을 만족하는, 내가 이미 참여한 커뮤니티 목록
   List<CommunityModel> get _joined => _communities.where((c) => c.isJoined && _matchesCommunity(c)).toList();
+  // 필터 조건을 만족하는, 아직 참여하지 않은 공개 커뮤니티 목록 (둘러보기용)
   List<CommunityModel> get _explore => _communities.where((c) => !c.isJoined && !c.isPrivate && _matchesCommunity(c)).toList();
+  // 미참여 공개 커뮤니티 중 핀 수가 가장 많은 커뮤니티를 인기 배너로 선정
   CommunityModel? get _featured {
     final pool = _communities.where((c) => !c.isJoined && !c.isPrivate).toList();
     if (pool.isEmpty) return null;
     return pool.reduce((a, b) => a.pinCount > b.pinCount ? a : b);
   }
 
+  // 커뮤니티 생성 화면으로 이동 후 돌아오면 목록 갱신
   Future<void> _openCreate() async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCommunityScreen()));
     _load();
   }
 
+  // 커뮤니티 상세 화면으로 이동 후 돌아오면 목록 갱신 (참여 상태 변경 반영)
   Future<void> _openDetail(CommunityModel c) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => CommunityDetailScreen(community: c)));
     _load();
   }
 
+  // 커뮤니티 참여/탈퇴 토글 후 목록 갱신
   Future<void> _toggleJoin(CommunityModel c) async {
     await CommunityService.toggleJoin(c.id);
     _load();
   }
 
+  // 검색창 표시 여부 토글, 닫을 때는 검색어 초기화, 열 때는 포커스 이동
   void _toggleSearch() {
     setState(() {
       _showSearch = !_showSearch;
@@ -185,6 +205,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     });
   }
 
+  // 초대 코드로 커뮤니티 참여하는 바텀시트를 열고, 코드 검증 결과에 따라 성공/실패 스낵바 표시
   Future<void> _showJoinByCode() async {
     final ctrl = TextEditingController();
     await showModalBottomSheet(
@@ -214,11 +235,13 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   @override
+  // 상단 앱바(검색 토글 포함) + 탭바 + 3개 탭 뷰(그룹/발견/팔로잉)로 구성된 화면 렌더링
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
       body: NestedScrollView(
         headerSliverBuilder: (context, _) => [
+          // 스크롤에 따라 접히는 앱바 — 검색 모드일 때 제목 대신 검색창 표시
           SliverAppBar(
             floating: true, snap: true,
             backgroundColor: _kBg,
@@ -239,6 +262,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
               IconButton(icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 24), onPressed: _openCreate),
               const SizedBox(width: 6),
             ],
+            // 그룹/발견/팔로잉 3탭 전환용 탭바
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(48),
               child: Container(
@@ -258,6 +282,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             ),
           ),
         ],
+        // 각 탭에 필요한 데이터와 콜백을 하위 위젯으로 전달
         body: TabBarView(
           controller: _tabCtrl,
           children: [
@@ -280,12 +305,14 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
 }
 
 // ─── 발견 탭 ──────────────────────────────────────────────────────────────────
+// 내 지도 컬렉션 + 인기 지도 목록을 보여주는 발견 탭
 class _DiscoverTab extends StatelessWidget {
   final List<PinModel> savedPins;
   final Map<String, List<PinModel>> pinsByCategory;
   const _DiscoverTab({required this.savedPins, required this.pinsByCategory});
 
   @override
+  // 내 지도 컬렉션 섹션(핀이 없으면 안내 배너) + 이번 주 인기 지도 섹션을 슬리버로 구성
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
@@ -348,6 +375,7 @@ class _DiscoverTab extends StatelessWidget {
 }
 
 // ─── 그룹 탭 ──────────────────────────────────────────────────────────────────
+// 커뮤니티 참여/탐색을 담당하는 그룹 탭 — 인기 배너, 빠른 액션, 카테고리 필터, 내 커뮤니티/둘러보기 목록
 class _GroupsTab extends StatelessWidget {
   final List<CommunityModel> communities, joined, explore;
   final CommunityModel? featured;
@@ -367,6 +395,7 @@ class _GroupsTab extends StatelessWidget {
   });
 
   @override
+  // 로딩 중이면 인디케이터만 표시, 그 외에는 인기 배너/빠른 액션/필터/커뮤니티 목록을 스크롤 리스트로 구성
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
 
@@ -473,6 +502,7 @@ class _GroupsTab extends StatelessWidget {
     );
   }
 
+  // 카운트 배지와 "더보기" 버튼이 붙은 섹션 제목 위젯 생성
   Widget _buildSectionHeader(String title, int count, {String? sub}) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -493,11 +523,13 @@ class _GroupsTab extends StatelessWidget {
 }
 
 // ─── 팔로잉 탭 ────────────────────────────────────────────────────────────────
+// 팔로잉한 핀플러의 활동 스트림과 커뮤니티 공유 핀을 보여주는 팔로잉 탭
 class _FollowingTab extends StatelessWidget {
   final List<({PinModel pin, CommunityModel community})> communityPins;
   const _FollowingTab({required this.communityPins});
 
   @override
+  // 활동/공유 핀이 모두 없으면 빈 상태 안내, 있으면 활동 스트림 + 커뮤니티 공유 핀 목록 렌더링
   Widget build(BuildContext context) {
     final bool hasPins = communityPins.isNotEmpty;
     final bool hasActivity = _activityItems.isNotEmpty;
@@ -535,6 +567,7 @@ class _FollowingTab extends StatelessWidget {
   }
 }
 
+// 팔로잉 탭 전용 섹션 제목 위젯 (더보기 버튼 없는 단순 버전)
 class _FollowingHeader extends StatelessWidget {
   final String title;
   const _FollowingHeader({required this.title});
@@ -549,6 +582,7 @@ class _FollowingHeader extends StatelessWidget {
 }
 
 // ─── 섹션 헤더 ────────────────────────────────────────────────────────────────
+// 발견 탭에서 사용하는 "더보기" 링크 포함 섹션 제목 위젯
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title, super.key});
@@ -567,11 +601,13 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ─── 발견 위젯 ────────────────────────────────────────────────────────────────
+// "이번 주 픽" 대형 인기 지도 카드
 class _FeaturedMapCard extends StatelessWidget {
   final _DiscoverMap map;
   final VoidCallback? onTap;
   const _FeaturedMapCard({required this.map, this.onTap});
 
+  // 1000 이상 숫자를 "1.2K" 형태로 축약 표시
   String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
 
   @override
@@ -615,11 +651,13 @@ class _FeaturedMapCard extends StatelessWidget {
   }
 }
 
+// 발견 탭 그리드에 표시되는 일반 지도 카드
 class _DiscoverMapCard extends StatelessWidget {
   final _DiscoverMap map;
   final VoidCallback? onTap;
   const _DiscoverMapCard({required this.map, this.onTap});
 
+  // 1000 이상 숫자를 "1.2K" 형태로 축약 표시
   String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
 
   @override
@@ -661,6 +699,7 @@ class _DiscoverMapCard extends StatelessWidget {
   }
 }
 
+// "내 지도 컬렉션"의 카테고리별 칩 — 카테고리명에 맞는 이모지를 자동 매칭해 표시
 class _MyMapChip extends StatelessWidget {
   final String category;
   final int count;
@@ -668,6 +707,7 @@ class _MyMapChip extends StatelessWidget {
   const _MyMapChip({required this.category, required this.count, required this.onTap});
 
   static const _emojiMap = {'등산': '🏔', '산': '🌲', '카페': '☕', '커피': '☕', '음식': '🍜', '먹': '🍴', '맛집': '🍽', '사진': '📸', '폐허': '🏚', '어반': '🏙', '바다': '🌊', '해변': '🏖', '공원': '🌿', '위험': '⚠️', '소금빵': '🥐', '와플': '🧇'};
+  // 카테고리 이름에 포함된 키워드로 대표 이모지를 찾고, 없으면 기본 핀 이모지 반환
   String get _emoji { for (final e in _emojiMap.entries) { if (category.contains(e.key)) return e.value; } return '📍'; }
 
   @override
@@ -689,6 +729,7 @@ class _MyMapChip extends StatelessWidget {
   }
 }
 
+// 새 지도(카테고리)를 추가하도록 유도하는 칩
 class _AddMapChip extends StatelessWidget {
   final VoidCallback onTap;
   const _AddMapChip({required this.onTap});
@@ -710,6 +751,7 @@ class _AddMapChip extends StatelessWidget {
   }
 }
 
+// 저장된 핀(지도)이 하나도 없을 때 노출되는 안내 배너
 class _EmptyMapsBanner extends StatelessWidget {
   const _EmptyMapsBanner();
 
@@ -736,6 +778,7 @@ class _EmptyMapsBanner extends StatelessWidget {
 }
 
 // ─── 그룹 위젯 ────────────────────────────────────────────────────────────────
+// 이번 주 인기 커뮤니티를 강조 표시하는 배너 카드 (참여 버튼 포함)
 class _HotBanner extends StatelessWidget {
   final CommunityModel community;
   final VoidCallback onTap, onJoin;
@@ -789,6 +832,7 @@ class _HotBanner extends StatelessWidget {
   }
 }
 
+// "커뮤니티 만들기"/"코드로 참여" 등 빠른 액션 진입 카드
 class _QuickActionCard extends StatelessWidget {
   final IconData icon;
   final String label, description;
@@ -815,6 +859,7 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
+// "내 커뮤니티" 가로 스크롤 목록에 표시되는 참여 중인 커뮤니티 카드
 class _JoinedCard extends StatelessWidget {
   final CommunityModel community;
   final VoidCallback onTap;
@@ -853,6 +898,7 @@ class _JoinedCard extends StatelessWidget {
   }
 }
 
+// "둘러보기" 목록에 표시되는 미참여 커뮤니티 카드 (비공개 배지, 참여 버튼 포함)
 class _ExploreCard extends StatelessWidget {
   final CommunityModel community;
   final VoidCallback onTap, onJoin;
@@ -918,10 +964,12 @@ class _ExploreCard extends StatelessWidget {
 }
 
 // ─── 팔로잉 위젯 ──────────────────────────────────────────────────────────────
+// 팔로잉 활동 스트림의 개별 활동 카드 (핀 추가/지도 생성/공유 등)
 class _ActivityCard extends StatelessWidget {
   final _ActivityItem item;
   const _ActivityCard({required this.item});
 
+  // 활동 타입(actionType)에 따라 표시할 설명 문구를 결정
   String get _actionText { switch (item.actionType) { case 'created': return '새 지도를 만들었어요'; case 'shared': return '커뮤니티에 공유했어요'; default: return '지도에 핀을 추가했어요'; } }
 
   @override
@@ -977,6 +1025,7 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
+// 커뮤니티에서 공유된 핀을 보여주는 카드 — 탭하면 저장 핀 상세 화면으로 이동
 class _CommunityPinCard extends StatelessWidget {
   final PinModel pin;
   final CommunityModel community;
@@ -1007,6 +1056,7 @@ class _CommunityPinCard extends StatelessWidget {
 }
 
 // ─── 저장 핀 상세 화면 ─────────────────────────────────────────────────────────
+// 커뮤니티 공유 핀을 탭했을 때 보여주는, 내가 저장한 핀 기준 상세 화면
 class _SavedPinDetailScreen extends StatefulWidget {
   final PinModel pin;
   const _SavedPinDetailScreen({required this.pin});
@@ -1014,6 +1064,7 @@ class _SavedPinDetailScreen extends StatefulWidget {
   State<_SavedPinDetailScreen> createState() => _SavedPinDetailScreenState();
 }
 
+// _SavedPinDetailScreen 상태 — 지도 스타일, AI 랜드마크 정보 로딩 상태 관리
 class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
   final _mapCtrl = Completer<GoogleMapController>();
   LandmarkInfo? _landmarkInfo;
@@ -1021,25 +1072,31 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
   String? _mapStyle;
 
   @override
+  // 진입 시 AI 랜드마크 정보와 커스텀 지도 스타일을 병렬로 로드
   void initState() { super.initState(); _loadLandmarkInfo(); _loadMapStyle(); }
 
+  // 구글맵 커스텀 스타일 JSON 에셋 로드
   Future<void> _loadMapStyle() async {
     try { final style = await rootBundle.loadString('assets/map_style.json'); if (mounted) setState(() => _mapStyle = style); } catch (_) {}
   }
 
+  // Claude AI를 통해 이 핀 위치의 유래/명소/방문 팁 등 정보를 가져옴
   Future<void> _loadLandmarkInfo() async {
     final info = await LandmarkInfoService.fetchInfo(placeName: widget.pin.title, lat: widget.pin.lat, lng: widget.pin.lng);
     if (mounted) setState(() { _landmarkInfo = info; _isLoadingInfo = false; });
   }
 
+  // 구글 지도 앱(웹)으로 길찾기 연동
   Future<void> _openNavigation() async {
     final uri = Uri.parse('https://maps.google.com/?daddr=${widget.pin.lat},${widget.pin.lng}&directionsmode=driving');
     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  // 핀 정보를 외부 앱으로 공유
   void _share() => Share.share('📍 ${widget.pin.title} (${widget.pin.category})\nhttps://maps.google.com/?q=${widget.pin.lat},${widget.pin.lng}', subject: widget.pin.title);
 
   @override
+  // 상단 지도 히어로 영역 + 핀 정보(제목/좌표/설명/사진) + AI 정보 위젯 + 길찾기/공유 버튼으로 구성
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final pin = widget.pin;
@@ -1096,6 +1153,7 @@ class _SavedPinDetailScreenState extends State<_SavedPinDetailScreen> {
 }
 
 // ─── 핀 상세 화면 (발견 탭) ────────────────────────────────────────────────────
+// 발견 탭에서 지도 카드를 탭했을 때 보여주는, 목업 피드 포스트 기준 상세 화면
 class _PinDetailScreen extends StatefulWidget {
   final _FeedPost post;
   const _PinDetailScreen({required this.post});
@@ -1103,6 +1161,7 @@ class _PinDetailScreen extends StatefulWidget {
   State<_PinDetailScreen> createState() => _PinDetailScreenState();
 }
 
+// _PinDetailScreen 상태 — 지도 스타일, AI 랜드마크 정보 로딩 상태 관리
 class _PinDetailScreenState extends State<_PinDetailScreen> {
   final _mapCtrl = Completer<GoogleMapController>();
   LandmarkInfo? _landmarkInfo;
@@ -1110,25 +1169,31 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
   String? _mapStyle;
 
   @override
+  // 진입 시 AI 랜드마크 정보와 커스텀 지도 스타일을 병렬로 로드
   void initState() { super.initState(); _loadLandmarkInfo(); _loadMapStyle(); }
 
+  // 구글맵 커스텀 스타일 JSON 에셋 로드
   Future<void> _loadMapStyle() async {
     try { final style = await rootBundle.loadString('assets/map_style.json'); if (mounted) setState(() => _mapStyle = style); } catch (_) {}
   }
 
+  // Claude AI를 통해 이 위치의 유래/명소/방문 팁 등 정보를 가져옴
   Future<void> _loadLandmarkInfo() async {
     final info = await LandmarkInfoService.fetchInfo(placeName: widget.post.location, lat: widget.post.lat, lng: widget.post.lng);
     if (mounted) setState(() { _landmarkInfo = info; _isLoadingInfo = false; });
   }
 
+  // 구글 지도 앱(웹)으로 길찾기 연동
   Future<void> _openNavigation() async {
     final uri = Uri.parse('https://maps.google.com/?daddr=${widget.post.lat},${widget.post.lng}&directionsmode=driving');
     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  // 핀 정보를 외부 앱으로 공유
   void _share() => Share.share('📍 ${widget.post.location}\n${widget.post.district}\nhttps://maps.google.com/?q=${widget.post.lat},${widget.post.lng}', subject: widget.post.location);
 
   @override
+  // 상단 지도 히어로 영역 + 작성자 정보 + 위치/카테고리 + AI 정보 위젯 + 길찾기/공유 버튼으로 구성
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final post = widget.post;
@@ -1188,6 +1253,7 @@ class _PinDetailScreenState extends State<_PinDetailScreen> {
 }
 
 // ─── AI 정보 위젯 ──────────────────────────────────────────────────────────────
+// Claude AI가 생성한 랜드마크 정보(유래/명소/추천시간/팁)를 표시하는 카드 — 로딩/빈 상태 처리 포함
 class _LandmarkInfoWidget extends StatelessWidget {
   final bool isLoading;
   final LandmarkInfo? info;
@@ -1197,6 +1263,7 @@ class _LandmarkInfoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // 로딩 중에는 스피너와 안내 문구만 표시
     if (isLoading) return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.neutral200)),
@@ -1206,6 +1273,7 @@ class _LandmarkInfoWidget extends StatelessWidget {
         Text(l.aiLoading, style: const TextStyle(fontSize: 13, color: AppColors.neutral500)),
       ]),
     );
+    // 정보를 가져오지 못했으면 아무것도 표시하지 않음
     if (info == null) return const SizedBox.shrink();
     return Container(
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.neutral200),
@@ -1240,6 +1308,7 @@ class _LandmarkInfoWidget extends StatelessWidget {
   }
 }
 
+// AI 정보 카드 내부의 아이콘+라벨+본문 한 줄 항목 (유래/명소/추천시간/팁 각각에 사용)
 class _LandmarkRow extends StatelessWidget {
   final IconData icon;
   final String label, text;
@@ -1260,6 +1329,7 @@ class _LandmarkRow extends StatelessWidget {
 }
 
 // ─── 코드로 참여 시트 ─────────────────────────────────────────────────────────
+// 초대 코드 6자리를 입력해 커뮤니티에 참여하는 바텀시트
 class _CodeJoinSheet extends StatefulWidget {
   final TextEditingController ctrl;
   final Future<void> Function(String code) onJoin;
@@ -1268,10 +1338,12 @@ class _CodeJoinSheet extends StatefulWidget {
   State<_CodeJoinSheet> createState() => _CodeJoinSheetState();
 }
 
+// _CodeJoinSheet 상태 — 코드 참여 요청 중 로딩 상태만 관리
 class _CodeJoinSheetState extends State<_CodeJoinSheet> {
   bool _loading = false;
 
   @override
+  // 6자리 코드 입력 필드 + 참여 버튼(6자리 미만이면 비활성화) 렌더링
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(left: 16, right: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
@@ -1307,6 +1379,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
           SizedBox(
             width: double.infinity, height: 54,
             child: ElevatedButton(
+              // 코드가 정확히 6자리일 때만 활성화, 대문자로 변환해 참여 콜백 호출
               onPressed: (widget.ctrl.text.trim().length == 6 && !_loading)
                   ? () async { setState(() => _loading = true); await widget.onJoin(widget.ctrl.text.trim().toUpperCase()); }
                   : null,
@@ -1322,5 +1395,7 @@ class _CodeJoinSheetState extends State<_CodeJoinSheet> {
 }
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
+// 1000 이상 숫자를 "1.2k" 형태로 축약 표시 (그룹 탭 카드에서 사용)
 String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+// 날짜를 현지화된 "n분 전"류 상대 시간 문자열로 변환
 String _timeAgo(DateTime dt, BuildContext context) => AppLocalizations.of(context).timeAgo(dt);

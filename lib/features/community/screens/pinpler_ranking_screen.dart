@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
-import 'pinpler_profile_screen.dart';
-import 'pinpler_combined_map_screen.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/features/community/screens/pinpler_profile_screen.dart';
+import 'package:pinspot/features/community/screens/pinpler_combined_map_screen.dart';
 
 // ─── 더미 데이터 ────────────────────────────────────────────────────────────────
 
+// 랭킹 화면에 표시되는 핀플(핀스팟 인플루언서) 한 명의 데이터 모델
 class PinplerData {
   final String name;
   final String handle;
@@ -25,6 +26,7 @@ class PinplerData {
   });
 }
 
+// 핀플이 등록한 핀 하나의 위치 정보 모델
 class PinLocation {
   final String name;
   final String category;
@@ -34,6 +36,7 @@ class PinLocation {
   const PinLocation(this.name, this.category, this.lat, this.lng);
 }
 
+// 서버 연동 전까지 랭킹 화면에 보여줄 하드코딩된 핀플 목업 데이터
 const _samplePinplers = [
   PinplerData(
     name: '산악대장',
@@ -103,8 +106,10 @@ const _samplePinplers = [
 
 // ─── 랭킹 화면 ─────────────────────────────────────────────────────────────────
 
+// 랭킹 정렬 기준 (핀 개수 / 좋아요 / 저장 수)
 enum _SortType { pins, likes, saves }
 
+// 카테고리별 핀플 랭킹을 보여주는 화면 위젯
 class PinplerRankingScreen extends StatefulWidget {
   final String category;
   final IconData categoryIcon;
@@ -121,11 +126,13 @@ class PinplerRankingScreen extends StatefulWidget {
   State<PinplerRankingScreen> createState() => _PinplerRankingScreenState();
 }
 
+// PinplerRankingScreen 의 상태 클래스 - 정렬 기준과 다중 선택 모드를 관리
 class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
   _SortType _sortType = _SortType.likes;
   bool _isSelectMode = false;
   final Set<int> _selected = {};
 
+  // 현재 선택된 정렬 기준에 따라 핀플 목록을 내림차순으로 정렬해 반환
   List<PinplerData> get _sorted {
     final list = List<PinplerData>.from(_samplePinplers);
     switch (_sortType) {
@@ -139,6 +146,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
     return list;
   }
 
+  // 여러 핀플을 선택해 지도에서 함께 보기 위한 선택 모드 켜기/끄기
   void _toggleSelectMode() {
     setState(() {
       _isSelectMode = !_isSelectMode;
@@ -146,6 +154,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
     });
   }
 
+  // 선택 모드에서 특정 핀플의 선택 상태를 토글
   void _toggleSelect(int index) {
     setState(() {
       if (_selected.contains(index)) {
@@ -156,6 +165,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
     });
   }
 
+  // 선택된 핀플들의 핀을 하나의 지도 화면에서 함께 보여주는 화면으로 이동
   void _openCombinedMap() {
     final sorted = _sorted;
     final pinplers = _selected.map((i) => sorted[i]).toList();
@@ -170,12 +180,14 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
     );
   }
 
+  // 랭킹 화면 UI 구성 - 정렬 바, 핀플 리스트, 선택 모드 안내 및 지도 이동 버튼
   @override
   Widget build(BuildContext context) {
     final sorted = _sorted;
 
     return Scaffold(
       appBar: AppBar(
+        // 현재 카테고리 아이콘/이름 표시
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -185,6 +197,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
           ],
         ),
         actions: [
+          // 다중 선택 모드 진입/취소 버튼
           TextButton(
             onPressed: _toggleSelectMode,
             child: Text(
@@ -203,6 +216,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
             selected: _sortType,
             onSelect: (t) => setState(() => _sortType = t),
           ),
+          // 선택 모드일 때만 보여주는 안내 배너
           if (_isSelectMode)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -218,6 +232,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
                 ],
               ),
             ),
+          // 정렬된 순위대로 핀플 카드 리스트 렌더링
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -232,6 +247,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
                   isSelectMode: _isSelectMode,
                   isSelected: isSelected,
                   onTap: () {
+                    // 선택 모드면 선택 토글, 아니면 핀플 프로필 화면으로 이동
                     if (_isSelectMode) {
                       _toggleSelect(index);
                     } else {
@@ -253,6 +269,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
           ),
         ],
       ),
+      // 선택 모드에서 1명 이상 선택했을 때만 지도 보기 버튼 노출
       floatingActionButton: _isSelectMode && _selected.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _openCombinedMap,
@@ -270,6 +287,7 @@ class _PinplerRankingScreenState extends State<PinplerRankingScreen> {
 
 // ─── 정렬 바 ──────────────────────────────────────────────────────────────────
 
+// 좋아요순/핀 많은순/저장순 정렬 기준을 선택하는 칩 바 위젯
 class _SortBar extends StatelessWidget {
   final _SortType selected;
   final ValueChanged<_SortType> onSelect;
@@ -311,6 +329,7 @@ class _SortBar extends StatelessWidget {
   }
 }
 
+// _SortBar 안에서 사용되는 정렬 기준 선택 칩 하나
 class _SortChip extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -359,6 +378,7 @@ class _SortChip extends StatelessWidget {
 
 // ─── 핀플 카드 ────────────────────────────────────────────────────────────────
 
+// 랭킹 리스트에 한 줄로 표시되는 핀플 카드 (순위/아바타/통계 포함)
 class _PinplerCard extends StatelessWidget {
   final int rank;
   final PinplerData pinpler;
@@ -502,9 +522,11 @@ class _PinplerCard extends StatelessWidget {
     );
   }
 
+  // 1000 이상인 숫자는 K 단위로 축약해 표시
   String _formatNum(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
 }
 
+// 핀 개수/좋아요/저장 수 등 아이콘+숫자로 된 작은 통계 배지 위젯
 class _StatBadge extends StatelessWidget {
   final IconData icon;
   final String value;

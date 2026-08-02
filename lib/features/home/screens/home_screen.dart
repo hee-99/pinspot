@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/l10n/app_localizations.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../map/screens/map_screen.dart';
-import '../../community/screens/community_screen.dart';
-import '../../profile/screens/profile_screen.dart';
-import '../../pin/screens/create_pin_screen.dart';
-import '../../tigo/services/tigo_service.dart';
-import '../../tigo/widgets/tigo_unlock_dialog.dart';
+import 'package:pinspot/core/l10n/app_localizations.dart';
+import 'package:pinspot/design/theme/app_colors.dart';
+import 'package:pinspot/features/map/screens/map_screen.dart';
+import 'package:pinspot/features/community/screens/community_screen.dart';
+import 'package:pinspot/account/profile/screens/profile_screen.dart';
+import 'package:pinspot/features/pin/screens/create_pin_screen.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
+import 'package:pinspot/features/tigo/widgets/tigo_unlock_dialog.dart';
 
+// 앱의 메인 셸 화면 — 4탭 바텀 네비게이션과 IndexedStack으로 탭별 화면 전환 관리
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -30,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     TigoService.instance.addListener(_onTigoUpdate);
   }
 
+  // 티고 아이템 새로 잠금 해제 시 다이얼로그 표시
   void _onTigoUpdate() {
     final newItems = TigoService.instance.consumePendingUnlock();
     if (newItems.isNotEmpty && mounted) {
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 개인정보 동의 여부를 확인하고 미동의 시 안내 시트 표시
   Future<void> _checkPrivacyNotice() async {
     final prefs = await SharedPreferences.getInstance();
     final accepted = prefs.getBool('privacy_accepted') ?? false;
@@ -54,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 개인정보 동의 바텀시트를 모달로 표시 (닫기/드래그 불가, 동의해야 닫힘)
   void _showPrivacyNotice() {
     showModalBottomSheet(
       context: context,
@@ -76,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // 바텀 네비 탭 클릭 처리 — 카메라 탭은 모달 push, 나머지는 IndexedStack 전환
   void _onTabTapped(int index) {
     if (index == 0) {
       // 카메라: 모달로 열기, 현재 탭 유지
@@ -90,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // 탭별 화면을 IndexedStack으로 쌓아 상태 유지하며 전환
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,6 +173,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
+// 바텀 네비 개별 탭 아이템 — 활성/비활성 아이콘·색상 전환
 class _NavItem extends StatelessWidget {
   final IconData icon, activeIcon;
   final String label;

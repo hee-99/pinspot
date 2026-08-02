@@ -1,14 +1,18 @@
+// 티고 아바타에 장착 가능한 아이템 슬롯 종류
 enum TigoSlot { hat, outfit, bag, camera, badge, skin }
 
+// 티고 아이템 해금 조건을 나타내는 추상 클래스
 abstract class TigoUnlock {
   const TigoUnlock();
 }
 
+// 업로드(핀 등록) 개수 기준으로 해금되는 조건
 class UploadCountUnlock extends TigoUnlock {
   final int threshold;
   const UploadCountUnlock(this.threshold);
 }
 
+// 특정 지역/카테고리 방문 기준으로 해금되는 조건 (Phase 1에서는 항상 잠김 처리)
 class RegionUnlock extends TigoUnlock {
   final String category;
   const RegionUnlock(this.category);
@@ -22,6 +26,7 @@ class PurchaseUnlock extends TigoUnlock {
   const PurchaseUnlock(this.priceKrw, this.productId);
 }
 
+// 티고 꾸미기에 사용되는 개별 아이템 정보 (모자, 옷, 가방 등)
 class TigoItem {
   final String id;
   final TigoSlot slot;
@@ -39,6 +44,7 @@ class TigoItem {
     required this.zIndex,
   });
 
+  // 현재 업로드 개수 기준으로 이 아이템이 해금됐는지 판단
   bool isUnlocked(int uploadCount) {
     if (unlock is UploadCountUnlock) {
       return uploadCount >= (unlock as UploadCountUnlock).threshold;
@@ -52,6 +58,7 @@ class TigoItem {
     return 999;
   }
 
+  // 인앱결제로 구매해야 하는 프리미엄 아이템인지 여부
   bool get isPremium => unlock is PurchaseUnlock;
 
   int? get priceKrw => unlock is PurchaseUnlock ? (unlock as PurchaseUnlock).priceKrw : null;
@@ -59,6 +66,7 @@ class TigoItem {
   String? get productId => unlock is PurchaseUnlock ? (unlock as PurchaseUnlock).productId : null;
 }
 
+// 사용자별 티고 상태 — 업로드 수, 해금된 아이템 목록, 슬롯별 장착 아이템
 class TigoState {
   final int uploadCount;
   final List<String> unlockedItemIds;
@@ -81,6 +89,7 @@ class TigoState {
   );
 }
 
+// 프로필 화면 등에 노출되는 여행 통계 (방문 도시, 발자취, 사진 수)
 class TravelStats {
   final int visitedCities;
   final int footprints;

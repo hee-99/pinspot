@@ -6,17 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/models/pin_model.dart';
-import '../../../core/models/pin_rating_schema.dart';
-import '../../../core/services/directions_service.dart';
-import '../../../core/services/category_service.dart';
-import '../../../core/services/pin_service.dart';
-import '../../../core/theme/tigo_colors.dart';
-import '../../../core/utils/marker_builder.dart';
-import '../../tigo/models/tigo_model.dart';
-import '../../tigo/services/tigo_service.dart';
+import 'package:pinspot/design/theme/app_colors.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/core/models/pin_rating_schema.dart';
+import 'package:pinspot/features/map/services/directions_service.dart';
+import 'package:pinspot/core/services/category_service.dart';
+import 'package:pinspot/features/pin/services/pin_service.dart';
+import 'package:pinspot/design/theme/tigo_colors.dart';
+import 'package:pinspot/design/utils/marker_builder.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
 
+// 하드코딩된 데모용 핀(장소) — 정적 마커 데이터
 class _Pin {
   final LatLng pos;
   final String name;
@@ -24,6 +25,7 @@ class _Pin {
   const _Pin(this.pos, this.name, this.category);
 }
 
+// 하드코딩된 위험 지역 데이터 — 급류/낙석 등 경고용 마커
 class _DangerZone {
   final LatLng pos;
   final String name;
@@ -32,6 +34,7 @@ class _DangerZone {
   const _DangerZone(this.pos, this.name, this.reason, this.icon);
 }
 
+// 지도 화면 — Google Maps 표시, GPS 현위치 추적, 저장된 핀 마커, 카테고리 필터, 경로 안내를 담당
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -62,6 +65,7 @@ class _MapScreenState extends State<MapScreen> {
 
   static const _defaultPos = LatLng(37.5665, 126.9780);
 
+  // 데모용 정적 핀 목록
   static final _pins = [
     _Pin(const LatLng(37.5796, 126.9770), '경복궁 옆 골목', '문화재'),
     _Pin(const LatLng(37.5512, 126.9882), '서울 숨겨진 조각상', '조각상'),
@@ -70,6 +74,7 @@ class _MapScreenState extends State<MapScreen> {
     _Pin(const LatLng(37.5798, 127.0018), '낙산공원 야경', '사진 명소'),
   ];
 
+  // 데모용 위험 지역 목록
   static const _dangerZones = [
     _DangerZone(LatLng(37.0742, 127.0844), '살목지 계곡', '급류·익수 위험 구간. 우기 시 접근 금지.', '🌊'),
     _DangerZone(LatLng(37.7455, 128.8677), '한탄강 급류 구간', '수심 급변·암초 다수. 사망 사고 발생지.', '⚡'),
@@ -80,6 +85,7 @@ class _MapScreenState extends State<MapScreen> {
     _DangerZone(LatLng(35.1796, 129.0756), '부산 해운대 이안류', '이안류 발생 구간. 해수욕 금지 구역.', '🌊'),
   ];
 
+  // 카테고리명에 따라 마커 색상(hue) 결정
   double _categoryHue(String category) {
     if (category.contains('위험')) return BitmapDescriptor.hueRed;
     if (category.contains('맛집')) return 30.0;
@@ -90,6 +96,7 @@ class _MapScreenState extends State<MapScreen> {
     return BitmapDescriptor.hueGreen;
   }
 
+  // 카테고리/검색어로 필터링된 정적 데모 핀 목록
   List<_Pin> get _filteredStaticPins {
     var list = _selectedCategory == '전체'
         ? _pins
@@ -103,6 +110,7 @@ class _MapScreenState extends State<MapScreen> {
     return list;
   }
 
+  // 카테고리/검색어로 필터링된 사용자 저장 핀 목록
   List<PinModel> get _filteredSavedPins {
     var list = _selectedCategory == '전체'
         ? _savedPins
@@ -118,6 +126,7 @@ class _MapScreenState extends State<MapScreen> {
 
   int get _visiblePinCount => _filteredStaticPins.length + _filteredSavedPins.length;
 
+  // 지도 마커 빌드 — 정적 핀 + 저장된 핀 + 위험 지역 + 내 위치 마커를 합쳐 반환
   Set<Marker> get _markers {
     final staticList = _filteredStaticPins;
     final savedList = _filteredSavedPins;
@@ -174,6 +183,7 @@ class _MapScreenState extends State<MapScreen> {
     PinRefreshNotifier.instance.addListener(_loadSavedPins);
   }
 
+  // 내 위치 표시용 커스텀(티고) 마커 아이콘 생성
   Future<void> _loadMyLocationIcon() async {
     final icon = await MarkerBuilder.buildMyLocationMarker();
     if (mounted) setState(() => _myLocationIcon = icon);
@@ -184,6 +194,7 @@ class _MapScreenState extends State<MapScreen> {
     if (mounted) setState(() => _categories = cats);
   }
 
+  // 저장된 핀 로드 + 사진이 있는 핀은 커스텀 사진 마커 아이콘 생성, 여행 통계 계산
   Future<void> _loadSavedPins() async {
     final pins = await PinService.getPins();
     if (!mounted) return;
@@ -219,12 +230,14 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
+  // Google Maps 커스텀 스타일 JSON 에셋 로드
   Future<void> _loadMapStyle() async {
     final style = await rootBundle.loadString('assets/map_style.json');
     if (!mounted) return;
     setState(() => _mapStyle = style);
   }
 
+  // GPS 권한 요청 및 현재 위치 조회 — 성공 시 카메라 이동 및 실시간 위치 추적 시작
   Future<void> _fetchLocation() async {
     setState(() {
       _locationLoading = true;
@@ -273,6 +286,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // 위치 변경을 실시간 스트림으로 구독해 현재 위치 마커 갱신
   void _startPositionStream() {
     _posSub?.cancel();
     _posSub = Geolocator.getPositionStream(
@@ -283,6 +297,7 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  // 지도 카메라를 현재 위치로 이동 (위치 없으면 먼저 조회)
   Future<void> _moveToMyLocation() async {
     if (_currentPos == null) {
       await _fetchLocation();
@@ -292,6 +307,7 @@ class _MapScreenState extends State<MapScreen> {
     ctrl.animateCamera(CameraUpdate.newLatLngZoom(_currentPos!, 15));
   }
 
+  // 정적 데모 핀 상세 바텀시트 표시
   void _showPinSheet(_Pin pin) {
     showModalBottomSheet(
       context: context,
@@ -312,6 +328,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 위험 지역 상세 바텀시트 표시
   void _showDangerSheet(_DangerZone dz) {
     showModalBottomSheet(
       context: context,
@@ -321,6 +338,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 사용자가 저장한 핀의 상세 바텀시트 표시 (드래그로 크기 조절 가능)
   void _showSavedPinSheet(PinModel pin) {
     showModalBottomSheet(
       context: context,
@@ -348,6 +366,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 경로 안내 시작 — 현재 위치→목적지 도보 경로를 조회해 폴리라인으로 표시
   Future<void> _startNavigation(LatLng destination, String name) async {
     if (_currentPos == null) {
       _showSnack('현재 위치를 가져오는 중입니다...');
@@ -399,6 +418,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 진행 중인 경로 안내 취소 및 폴리라인 제거
   void _cancelNavigation() {
     setState(() {
       _isNavigating = false;
@@ -409,6 +429,7 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  // 핀 위치를 구글 지도 링크와 함께 외부 공유
   void _sharePin(LatLng pos, String name, String category) {
     Share.share(
       '📍 $name ($category)\n'
@@ -417,6 +438,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 검색어 변경 시 필터링된 핀들이 모두 보이도록 지도 카메라 자동 이동
   void _onSearchChanged(String v) {
     setState(() => _searchQuery = v);
     if (v.trim().isEmpty) return;
@@ -454,6 +476,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 좌표 목록을 모두 포함하는 최소 경계(bounds) 계산 — 카메라 fit용
   LatLngBounds _boundsFromPoints(List<LatLng> points) {
     double minLat = points.first.latitude, maxLat = points.first.latitude;
     double minLng = points.first.longitude, maxLng = points.first.longitude;
@@ -469,6 +492,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // GoogleMap 초기화 + 상단 검색/필터 패널 + 하단 경로 안내/내 위치 버튼을 Stack으로 구성
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -823,6 +847,7 @@ class _PinBottomSheet extends StatelessWidget {
     required this.onShare,
   });
 
+  // 현재 위치에서 핀까지의 거리를 km/m 단위 문자열로 변환
   String? get _distanceLabel {
     if (currentPos == null) return null;
     final m = Geolocator.distanceBetween(
@@ -1083,6 +1108,7 @@ class _SavedPinBottomSheet extends StatelessWidget {
     required this.scrollController,
   });
 
+  // 현재 위치에서 핀까지의 거리를 km/m 단위 문자열로 변환
   String? get _distanceLabel {
     if (currentPos == null) return null;
     final m = Geolocator.distanceBetween(
@@ -1239,6 +1265,7 @@ class _PinRatingsDisplay extends StatelessWidget {
 
   const _PinRatingsDisplay({required this.ratings, required this.category});
 
+  // 평가 단계(1~5)에 따라 초록→빨강으로 변하는 색상 반환
   Color _levelColor(double val) {
     if (val <= 1) return const Color(0xFF16A34A);
     if (val <= 2) return const Color(0xFF65A30D);

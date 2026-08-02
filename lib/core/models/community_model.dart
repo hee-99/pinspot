@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// 커뮤니티(그룹) 정보를 표현하는 모델 — 이름/색상/멤버수/공개여부/참여코드 등
 class CommunityModel {
   final String id;
   final String name;
@@ -33,6 +34,7 @@ class CommunityModel {
 
   Color get color => Color(colorValue);
 
+  // 로컬 저장(SharedPreferences)을 위해 JSON 맵으로 직렬화
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
@@ -48,6 +50,7 @@ class CommunityModel {
     'imagePath': imagePath,
   };
 
+  // JSON 맵을 CommunityModel로 역직렬화 (isJoined는 별도 상태이므로 파라미터로 주입)
   factory CommunityModel.fromJson(Map<String, dynamic> j, {bool isJoined = false}) =>
       CommunityModel(
         id: j['id'] as String,
@@ -65,6 +68,7 @@ class CommunityModel {
         imagePath: j['imagePath'] as String?,
       );
 
+  // 일부 필드만 바꾼 새 인스턴스를 반환 (참여상태/핀수/멤버수/이미지 갱신용)
   CommunityModel copyWith({bool? isJoined, int? pinCount, int? memberCount, String? imagePath}) =>
       CommunityModel(
         id: id,

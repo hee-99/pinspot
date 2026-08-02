@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/theme/app_theme.dart';
-import 'pinpler_ranking_screen.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/features/community/screens/pinpler_ranking_screen.dart';
 
+// 핀플러(랭킹에 오른 사용자) 상세 프로필 화면 — 앱바/통계/지도/핀 목록으로 구성
 class PinplerProfileScreen extends StatelessWidget {
   final PinplerData pinpler;
   final String category;
@@ -41,6 +42,7 @@ class PinplerProfileScreen extends StatelessWidget {
 
 // ─── 앱바 ─────────────────────────────────────────────────────────────────────
 
+// 카테고리 색상 그라디언트 배경 + 아바타/이름/핸들/팔로우 버튼을 담은 확장형 앱바
 class _ProfileAppBar extends StatelessWidget {
   final PinplerData pinpler;
   final Color categoryColor;
@@ -140,10 +142,12 @@ class _ProfileAppBar extends StatelessWidget {
 
 // ─── 통계 ─────────────────────────────────────────────────────────────────────
 
+// 핀/좋아요/저장 수를 보여주는 통계 행
 class _StatsRow extends StatelessWidget {
   final PinplerData pinpler;
   const _StatsRow({required this.pinpler});
 
+  // 1000 이상이면 K 단위로 축약 표기 (예: 1500 -> 1.5K)
   String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
 
   @override
@@ -165,6 +169,7 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
+// 통계 행에 쓰이는 아이콘+값+라벨 단일 항목
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;
@@ -188,6 +193,7 @@ class _StatItem extends StatelessWidget {
 
 // ─── 섹션 타이틀 ──────────────────────────────────────────────────────────────
 
+// 리스트 섹션 구분용 제목 위젯
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle({required this.title});
@@ -203,6 +209,7 @@ class _SectionTitle extends StatelessWidget {
 
 // ─── 핀플 지도 (Google Maps) ──────────────────────────────────────────────────
 
+// 핀플러가 등록한 핀들을 표시하는 Google Maps 위젯
 class _PinMap extends StatefulWidget {
   final PinplerData pinpler;
   const _PinMap({required this.pinpler});
@@ -214,6 +221,7 @@ class _PinMap extends StatefulWidget {
 class _PinMapState extends State<_PinMap> {
   final Completer<GoogleMapController> _controller = Completer();
 
+  // 핀플러의 모든 핀 좌표 평균으로 지도 중심점 계산
   LatLng get _center {
     final pins = widget.pinpler.pins;
     final lat = pins.map((p) => p.lat).reduce((a, b) => a + b) / pins.length;
@@ -253,6 +261,7 @@ class _PinMapState extends State<_PinMap> {
 
 // ─── 핀 목록 아이템 ───────────────────────────────────────────────────────────
 
+// 최근 핀 목록에 사용되는 개별 핀 항목 카드
 class _PinListItem extends StatelessWidget {
   final PinLocation pin;
   final Color categoryColor;

@@ -6,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/models/community_model.dart';
-import '../../../core/models/pin_model.dart';
-import '../../../core/services/community_service.dart';
-import '../../../core/utils/marker_builder.dart';
+import 'package:pinspot/design/theme/app_theme.dart';
+import 'package:pinspot/core/models/community_model.dart';
+import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/features/community/services/community_service.dart';
+import 'package:pinspot/design/utils/marker_builder.dart';
 
+// 커뮤니티 상세 화면 — 순위/핀 피드/지도 탭으로 구성된 최상위 위젯
 class CommunityDetailScreen extends StatefulWidget {
   final CommunityModel community;
   const CommunityDetailScreen({super.key, required this.community});
@@ -20,6 +21,7 @@ class CommunityDetailScreen extends StatefulWidget {
   State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
 }
 
+// 커뮤니티 상세 화면의 상태 관리 — 탭 컨트롤러와 참여 여부를 보관
 class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
@@ -27,6 +29,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
 
   @override
   void initState() {
+    // 순위/핀 피드/지도 3개 탭 컨트롤러 초기화 및 현재 참여 상태 로드
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
     _isJoined = widget.community.isJoined;
@@ -38,11 +41,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     super.dispose();
   }
 
+  // 커뮤니티 참여/탈퇴 상태를 서버(로컬 저장소)에 토글 저장
   Future<void> _toggleJoin() async {
     await CommunityService.toggleJoin(widget.community.id);
     setState(() => _isJoined = !_isJoined);
   }
 
+  // 커뮤니티 정보를 외부 앱으로 공유
   void _share() {
     Share.share(
       '📍 핀스팟 커뮤니티 — ${widget.community.emoji} ${widget.community.name}\n'
@@ -52,12 +57,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     );
   }
 
+  // 커뮤니티 상세 화면 전체 레이아웃 — 확장형 헤더 + 통계 바 + 고정 탭바 + 탭별 콘텐츠
   @override
   Widget build(BuildContext context) {
     final color = widget.community.color;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3EE),
       body: NestedScrollView(
+        // 스크롤에 따라 접히는 헤더 영역(커버 이미지/제목) 정의
         headerSliverBuilder: (_, __) => [
           SliverAppBar(
             expandedHeight: 200,
@@ -68,11 +75,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
+              // 공유 버튼
               IconButton(
                 icon: const Icon(Icons.ios_share_outlined, color: Colors.white),
                 onPressed: _share,
               ),
             ],
+            // 커뮤니티 색상 기반 그라데이션 배경 + 이모지/이름/설명 표시
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
@@ -110,6 +119,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               ),
             ),
           ),
+          // 멤버 수/핀 수 통계 및 초대코드·참여버튼 영역
           SliverToBoxAdapter(
             child: Container(
               color: Colors.white,
@@ -126,6 +136,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                       label: '핀 ${_formatCount(widget.community.pinCount)}개',
                       color: color),
                   const Spacer(),
+                  // 비공개 커뮤니티인 경우 초대 코드를 탭하면 클립보드로 복사
                   if (widget.community.isPrivate && widget.community.joinCode != null)
                     GestureDetector(
                       onTap: () {
@@ -160,6 +171,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                         ),
                       ),
                     )
+                  // 소유자가 아니면 참여/참여중 토글 버튼 표시
                   else if (!widget.community.isOwner)
                     GestureDetector(
                       onTap: _toggleJoin,
@@ -189,6 +201,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                         ),
                       ),
                     )
+                  // 소유자인 경우 "내가 만든 커뮤니티" 배지 표시
                   else
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -213,6 +226,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               ),
             ),
           ),
+          // 스크롤 시 상단에 고정되는 탭바(순위/핀 피드/지도)
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabBarDelegate(
@@ -234,6 +248,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             ),
           ),
         ],
+        // 탭 순서: 순위(리더보드) → 핀 피드 → 지도
         body: TabBarView(
           controller: _tabCtrl,
           children: [
@@ -247,6 +262,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
   }
 }
 
+// 아이콘 + 라벨 형태의 작은 통계 칩(멤버 수, 핀 수 등)
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -269,6 +285,7 @@ class _StatChip extends StatelessWidget {
   }
 }
 
+// NestedScrollView에서 탭바를 상단에 고정시키기 위한 delegate
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
   const _TabBarDelegate(this.tabBar);
@@ -278,6 +295,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get maxExtent => 48;
 
+  // 고정 높이 컨테이너에 탭바를 감싸 반환
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
@@ -290,6 +308,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_TabBarDelegate old) => false;
 }
 
+// 핀 피드 탭 — 커뮤니티에 공유된 핀 목록을 카드 리스트로 표시
 class _PinFeedTab extends StatefulWidget {
   final CommunityModel community;
   const _PinFeedTab({required this.community});
@@ -298,6 +317,7 @@ class _PinFeedTab extends StatefulWidget {
   State<_PinFeedTab> createState() => _PinFeedTabState();
 }
 
+// 핀 피드 탭의 상태 관리 — 핀 목록 로딩 상태 보관
 class _PinFeedTabState extends State<_PinFeedTab> {
   List<PinModel> _pins = [];
   bool _loading = true;
@@ -308,11 +328,13 @@ class _PinFeedTabState extends State<_PinFeedTab> {
     _load();
   }
 
+  // 커뮤니티에 공유된 핀 목록을 불러옴
   Future<void> _load() async {
     final pins = await CommunityService.getCommunityPins(widget.community.id);
     if (mounted) setState(() { _pins = pins; _loading = false; });
   }
 
+  // 로딩 중/빈 상태/핀 목록 순으로 화면 구성
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -350,11 +372,13 @@ class _PinFeedTabState extends State<_PinFeedTab> {
   }
 }
 
+// 핀 피드 리스트에 표시되는 개별 핀 카드
 class _CommunityDetailPinCard extends StatelessWidget {
   final PinModel pin;
   final Color color;
   const _CommunityDetailPinCard({required this.pin, required this.color});
 
+  // 사진 썸네일 + 제목/카테고리/설명/좌표로 구성된 카드 UI
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -416,6 +440,7 @@ class _CommunityDetailPinCard extends StatelessWidget {
     );
   }
 
+  // 사진이 없는 핀을 위한 대체 배경(위치 아이콘)
   Widget _mapPlaceholder() => Container(
     height: 80,
     decoration: BoxDecoration(gradient: LinearGradient(
@@ -425,6 +450,7 @@ class _CommunityDetailPinCard extends StatelessWidget {
   );
 }
 
+// 지도 탭 — 커뮤니티에 공유된 핀을 지도 위 클러스터 마커로 표시
 class _MapTab extends StatefulWidget {
   final CommunityModel community;
   const _MapTab({required this.community});
@@ -433,6 +459,7 @@ class _MapTab extends StatefulWidget {
   State<_MapTab> createState() => _MapTabState();
 }
 
+// 지도 탭의 상태 관리 — 핀/마커/지도 스타일 로딩 상태 보관
 class _MapTabState extends State<_MapTab> {
   final _mapCtrl = Completer<GoogleMapController>();
   List<PinModel> _pins = [];
@@ -442,11 +469,13 @@ class _MapTabState extends State<_MapTab> {
 
   @override
   void initState() {
+    // 지도 스타일과 핀 데이터를 병행 로드
     super.initState();
     _loadMapStyle();
     _load();
   }
 
+  // 지도 커스텀 스타일 JSON 에셋 로드
   Future<void> _loadMapStyle() async {
     try {
       final style = await rootBundle.loadString('assets/map_style.json');
@@ -454,6 +483,7 @@ class _MapTabState extends State<_MapTab> {
     } catch (_) {}
   }
 
+  // 커뮤니티 핀 목록을 불러온 뒤 지도 마커를 생성
   Future<void> _load() async {
     final pins = await CommunityService.getCommunityPins(widget.community.id);
     if (!mounted) return;
@@ -461,6 +491,7 @@ class _MapTabState extends State<_MapTab> {
     await _buildMarkers(pins);
   }
 
+  // 가까운 위치의 핀들을 클러스터로 묶어 지도 마커 아이콘 생성
   Future<void> _buildMarkers(List<PinModel> pins) async {
     final clusters = MarkerBuilder.clusterByLocation<PinModel>(
       items: pins,
@@ -493,6 +524,7 @@ class _MapTabState extends State<_MapTab> {
     if (mounted) setState(() => _markers = built);
   }
 
+  // 마커 탭 시 핀(또는 클러스터) 정보를 바텀시트로 표시
   void _showPinSheet(PinModel pin, int count) {
     showModalBottomSheet(
       context: context,
@@ -506,6 +538,7 @@ class _MapTabState extends State<_MapTab> {
     );
   }
 
+  // 모든 핀 좌표의 평균값으로 지도 초기 중심점 계산
   LatLng get _center {
     if (_pins.isEmpty) return const LatLng(37.5665, 126.9780);
     return LatLng(
@@ -514,6 +547,7 @@ class _MapTabState extends State<_MapTab> {
     );
   }
 
+  // 로딩/빈 상태/지도(마커+배지+중심이동버튼) 순으로 화면 구성
   @override
   Widget build(BuildContext context) {
     final color = widget.community.color;
@@ -604,6 +638,7 @@ class _MapTabState extends State<_MapTab> {
   }
 }
 
+// 지도에서 마커를 탭했을 때 뜨는 핀 상세 정보 바텀시트
 class _CommunityPinSheet extends StatelessWidget {
   final PinModel pin;
   final int count;
@@ -615,6 +650,7 @@ class _CommunityPinSheet extends StatelessWidget {
     required this.color,
   });
 
+  // 사진, 핀 제목/카테고리, 클러스터 인원 수, 설명을 담은 바텀시트 UI
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -740,6 +776,7 @@ class _CommunityPinSheet extends StatelessWidget {
   }
 }
 
+// 큰 숫자를 "1.2k" 형태로 축약 표시
 String _formatCount(int count) {
   if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}k';
   return '$count';
@@ -747,6 +784,7 @@ String _formatCount(int count) {
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
 
+// 순위 탭에 표시되는 멤버 데이터 모델
 class _Member {
   final String name;
   final Color avatarColor;
@@ -764,9 +802,11 @@ class _Member {
     required this.saves,
   });
 
+  // 핀 5점, 좋아요 2점, 저장 3점 가중치로 순위 점수 계산
   int get score => pins * 5 + likes * 2 + saves * 3;
 }
 
+// 순위 탭 — 멤버 순위 포디움과 정렬 가능한 순위 리스트
 class _LeaderboardTab extends StatefulWidget {
   final CommunityModel community;
   const _LeaderboardTab({required this.community});
@@ -775,11 +815,13 @@ class _LeaderboardTab extends StatefulWidget {
   State<_LeaderboardTab> createState() => _LeaderboardTabState();
 }
 
+// 순위 탭의 상태 관리 — 정렬 기준과 목업 멤버 목록 보관
 class _LeaderboardTabState extends State<_LeaderboardTab> {
   static const _sortLabels = ['순위순', '인기순', '추천순'];
   int _sortIdx = 0;
   late List<_Member> _members;
 
+  // 실제 서버 연동 전까지 사용하는 목업 멤버 이름/이모지/색상 데이터
   static const _names = [
     '산악대장', '도시탐험가', '새벽하이커', '사진작가', '핀스팟러',
     '여행고수', '골목탐방', '뷰맛집러', '감성여행자', '핀헌터',
@@ -799,6 +841,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
     _members = _generateMembers();
   }
 
+  // 커뮤니티 ID를 시드로 사용해 항상 동일한 결과를 내는 가짜 멤버 목록 생성(실서버 데이터 아님)
   List<_Member> _generateMembers() {
     final count = max(5, min(widget.community.memberCount, 20));
     return List.generate(count, (i) {
@@ -814,6 +857,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
     });
   }
 
+  // 선택된 정렬 기준(순위/인기/추천)에 따라 멤버 목록 정렬
   List<_Member> get _sorted {
     final list = [..._members];
     switch (_sortIdx) {
@@ -824,6 +868,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
     return list;
   }
 
+  // 포디움(상위 3명) + 정렬 바 + 전체 순위 리스트 구성
   @override
   Widget build(BuildContext context) {
     final sorted = _sorted;
@@ -850,11 +895,13 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
   }
 }
 
+// 상위 3명을 시상대 형태로 보여주는 위젯
 class _Podium extends StatelessWidget {
   final List<_Member> top3;
   final Color color;
   const _Podium({required this.top3, required this.color});
 
+  // 2등-1등-3등 순서로 배치하여 가운데가 가장 높은 시상대 레이아웃 구성
   @override
   Widget build(BuildContext context) {
     if (top3.isEmpty) return const SizedBox.shrink();
@@ -902,6 +949,7 @@ class _Podium extends StatelessWidget {
   }
 }
 
+// 시상대의 개별 순위(1/2/3등) 슬롯 — 아바타, 메달, 점수, 단상 블록으로 구성
 class _PodiumSlot extends StatelessWidget {
   final _Member member;
   final int rank;
@@ -913,6 +961,7 @@ class _PodiumSlot extends StatelessWidget {
     required this.color, required this.heightFactor,
   });
 
+  // 순위별 메달 이모지, 단상 색상(금/은/동), 단상 높이 매핑
   static const _medals = {1: '🥇', 2: '🥈', 3: '🥉'};
   static const _podiumColors = {
     1: Color(0xFFFFD700),
@@ -1027,6 +1076,7 @@ class _PodiumSlot extends StatelessWidget {
   }
 }
 
+// 순위 정렬 기준(순위순/인기순/추천순)을 선택하는 칩 바
 class _SortBar extends StatelessWidget {
   final List<String> labels;
   final int selected;
@@ -1038,6 +1088,7 @@ class _SortBar extends StatelessWidget {
     required this.color, required this.onSelect,
   });
 
+  // 선택된 정렬 라벨을 강조 색상으로 표시하는 칩 목록 렌더링
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1077,6 +1128,7 @@ class _SortBar extends StatelessWidget {
   }
 }
 
+// 순위 리스트의 개별 멤버 행 — 순위, 아바타, 이름, 통계, 점수 표시
 class _MemberRow extends StatelessWidget {
   final int rank;
   final _Member member;
@@ -1088,6 +1140,7 @@ class _MemberRow extends StatelessWidget {
     required this.color, required this.sortIdx,
   });
 
+  // 1등 강조 스타일 + 순위/아바타/이름/통계/점수를 한 행에 표시
   @override
   Widget build(BuildContext context) {
     final isTop3 = rank <= 3;
@@ -1171,6 +1224,7 @@ class _MemberRow extends StatelessWidget {
   }
 }
 
+// 멤버 행 하단의 핀/좋아요/저장 통계 아이콘 줄 — 현재 정렬 기준에 해당하는 값 강조
 class _StatRow extends StatelessWidget {
   final _Member member;
   final int highlightIdx;
@@ -1180,6 +1234,7 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 정렬 기준(순위순=전체, 인기순=좋아요/저장, 추천순=핀)에 맞는 항목만 강조 색상 적용
     final stats = [
       (Icons.location_on_outlined, '${member.pins} 핀'),
       (Icons.favorite_outline, _formatCount(member.likes)),
@@ -1209,6 +1264,7 @@ class _StatRow extends StatelessWidget {
   }
 }
 
+// 포디움 점수 텍스트 등에 쓰이는 색상을 어둡게 만드는 헬퍼
 extension _ColorX on Color {
   Color darken([double amount = 0.2]) {
     final hsl = HSLColor.fromColor(this);

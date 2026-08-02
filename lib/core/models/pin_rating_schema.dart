@@ -1,3 +1,4 @@
+// 카테고리별 평가 항목(위험도/난이도/맛 등) 하나를 정의하는 모델
 class RatingDimension {
   final String key;
   final String label;
@@ -11,13 +12,16 @@ class RatingDimension {
     required this.levelLabels,
   });
 
+  // 평점(1~5)에 대응하는 라벨 문자열을 반환
   String labelFor(double rating) {
     final idx = (rating.round() - 1).clamp(0, 4);
     return levelLabels[idx];
   }
 }
 
+// 핀 카테고리마다 어떤 평가 항목들을 보여줄지 정의하는 스키마
 class PinRatingSchema {
+  // ── 평가 항목별 라벨/이모지/점수 단계 정의 ──────────────────────────
   static const _danger = RatingDimension(
     key: 'danger', label: '위험도', emoji: '⚠️',
     levelLabels: ['안전', '낮음', '보통', '높음', '매우높음'],
@@ -71,6 +75,7 @@ class PinRatingSchema {
     levelLabels: ['흔함', '약간흔함', '보통', '희귀', '매우희귀'],
   );
 
+  // 카테고리명 → 해당 카테고리에서 사용할 평가 항목 목록 매핑
   static const Map<String, List<RatingDimension>> _schemas = {
     '등산/명산':      [_difficulty, _danger, _scenery],
     '계곡/자연':      [_danger, _waterQuality, _accessibility],
@@ -83,6 +88,7 @@ class PinRatingSchema {
     '조각상/공공예술': [_scenery, _accessibility],
   };
 
+  // 카테고리명에 맞는 평가 항목 목록을 반환 (완전 일치 우선, 부분 일치로 폴백)
   static List<RatingDimension> forCategory(String category) {
     if (_schemas.containsKey(category)) return _schemas[category]!;
     for (final key in _schemas.keys) {

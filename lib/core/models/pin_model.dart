@@ -1,3 +1,4 @@
+// 사용자가 등록한 핀(장소) 정보를 표현하는 모델 — 위치/카테고리/사진/평점 등
 class PinModel {
   final String id;
   final String title;
@@ -21,6 +22,7 @@ class PinModel {
     this.ratings,
   });
 
+  // 로컬 저장(SharedPreferences)을 위해 JSON 맵으로 직렬화
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
@@ -33,6 +35,7 @@ class PinModel {
     if (ratings != null) 'ratings': ratings,
   };
 
+  // JSON 맵을 PinModel로 역직렬화
   factory PinModel.fromJson(Map<String, dynamic> j) => PinModel(
     id: j['id'] as String,
     title: j['title'] as String,

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import '../data/tigo_items.dart';
-import '../models/tigo_model.dart';
-import 'tigo_service.dart';
+import 'package:pinspot/features/tigo/data/tigo_items.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
 
 /// 티고 프리미엄 아이템의 실제 스토어 결제(Google Play Billing)를 담당.
 ///
@@ -24,6 +24,7 @@ class TigoPurchaseService extends ChangeNotifier {
   bool get storeAvailable => _storeAvailable;
   String? get lastError => _lastError;
 
+  // 스토어 연결 및 구매 스트림 구독, 프리미엄 상품 정보 조회 초기화
   Future<void> init() async {
     _sub = _iap.purchaseStream.listen(_onPurchaseUpdate, onError: (Object e) {
       _lastError = '$e';
@@ -61,6 +62,7 @@ class TigoPurchaseService extends ChangeNotifier {
     return _iap.buyNonConsumable(purchaseParam: param);
   }
 
+  // 구매 스트림에서 전달되는 결제 상태 변화를 처리 (완료/복원 시 아이템 해금, 에러 처리)
   void _onPurchaseUpdate(List<PurchaseDetails> purchases) {
     for (final purchase in purchases) {
       switch (purchase.status) {

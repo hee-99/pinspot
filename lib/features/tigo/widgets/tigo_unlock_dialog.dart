@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/tigo_colors.dart';
-import '../models/tigo_model.dart';
-import 'tigo_avatar.dart';
+import 'package:pinspot/design/theme/tigo_colors.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
+import 'package:pinspot/features/tigo/widgets/tigo_avatar.dart';
 
+// 새 티고 아이템을 해금했을 때 띄우는 축하 다이얼로그
 class TigoUnlockDialog extends StatelessWidget {
   final List<TigoItem> items;
 

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../data/tigo_items.dart';
-import '../models/tigo_model.dart';
+import 'package:pinspot/features/tigo/data/tigo_items.dart';
+import 'package:pinspot/features/tigo/models/tigo_model.dart';
 
 /// 티고 아바타: 장착 아이템을 실제로 캐릭터에 겹쳐 그리는 페이퍼돌.
 /// 래스터 자산 없이 CustomPainter로 직접 그려서(base/items PNG는 실제 그림이 없는
@@ -23,6 +23,7 @@ class TigoAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!showBase) return SizedBox(width: size, height: size);
 
+    // 스킨을 제외한 장착 아이템들을 zIndex 순으로 정렬해서 그리기 순서를 결정
     final itemIds = equipped.entries
         .where((e) => e.key != TigoSlot.skin)
         .map((e) => e.value)
@@ -42,6 +43,7 @@ class TigoAvatar extends StatelessWidget {
   static int _zIndexOf(String itemId) => tigoItemById(itemId)?.zIndex ?? 0;
 }
 
+// 티고 아바타의 피부색/줄무늬/배 색상 등을 담는 스킨 팔레트
 class _TigoSkin {
   final Color body, belly, stripe, blush;
   const _TigoSkin({
@@ -71,6 +73,7 @@ const _kGoldenSkin = _TigoSkin(
   blush: Color(0xFFFFD37A),
 );
 
+// 장착된 스킨 id에 맞는 색상 팔레트를 반환 (없으면 기본 클래식 스킨)
 _TigoSkin _skinFor(String? skinId) {
   switch (skinId) {
     case 'skin_golden_tiger':
@@ -84,6 +87,7 @@ _TigoSkin _skinFor(String? skinId) {
 
 const _kInk = Color(0xFF2B2118);
 
+// 티고 캐릭터를 100x100 좌표계에 벡터로 직접 그리는 CustomPainter
 class _TigoPainter extends CustomPainter {
   final String? skinId;
   final List<String> items;
@@ -100,6 +104,7 @@ class _TigoPainter extends CustomPainter {
     _paintBody(canvas, skin);
     _paintHead(canvas, skin);
 
+    // 장착된 아이템 id에 맞춰 해당 그리기 함수를 순서대로 호출
     for (final id in items) {
       switch (id) {
         case 'outfit_tshirt':
@@ -115,6 +120,7 @@ class _TigoPainter extends CustomPainter {
       }
     }
 
+    // 프리미엄 스킨일 경우 반짝이 효과 추가
     if (skinId == 'skin_golden_tiger') {
       _paintSparkles(canvas, const Color(0xFFFFE39A));
     } else if (skinId == 'skin_special') {
@@ -124,6 +130,7 @@ class _TigoPainter extends CustomPainter {
     canvas.restore();
   }
 
+  // 배경 그라디언트 카드 배경 그리기
   void _paintBackdrop(Canvas canvas) {
     final rect = RRect.fromRectAndRadius(
       const Rect.fromLTWH(0, 0, 100, 100),
@@ -138,6 +145,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawRRect(rect, paint);
   }
 
+  // 몸통과 배 부분 그리기
   void _paintBody(Canvas canvas, _TigoSkin skin) {
     final body = Path()
       ..moveTo(30, 100)
@@ -155,6 +163,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawPath(belly, Paint()..color = skin.belly);
   }
 
+  // 얼굴 전체(귀, 무늬, 눈, 코, 입, 볼터치) 그리기
   void _paintHead(Canvas canvas, _TigoSkin skin) {
     // 귀
     for (final dx in [-1.0, 1.0]) {
@@ -247,6 +256,7 @@ class _TigoPainter extends CustomPainter {
     );
   }
 
+  // '여행 티셔츠' 아이템 그리기
   void _paintOutfit(Canvas canvas) {
     const shirt = Color(0xFF2F9E6E);
     const collar = Color(0xFF1F7A54);
@@ -268,6 +278,7 @@ class _TigoPainter extends CustomPainter {
     );
   }
 
+  // '하이킹 백팩' 아이템 그리기
   void _paintBag(Canvas canvas) {
     const strap = Color(0xFF8A5A2B);
     const pack = Color(0xFF6E4423);
@@ -288,6 +299,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawPath(Path()..moveTo(62, 70)..quadraticBezierTo(64, 85, 62, 100), strapPaint);
   }
 
+  // '기본 카메라' 아이템 그리기
   void _paintCamera(Canvas canvas) {
     canvas.drawPath(
       Path()..moveTo(38, 78)..quadraticBezierTo(50, 88, 62, 78),
@@ -309,6 +321,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawRect(const Rect.fromLTWH(58, 86, 3, 3), Paint()..color = Colors.white70);
   }
 
+  // '탐험가 모자' 아이템 그리기
   void _paintHat(Canvas canvas) {
     const khaki = Color(0xFFD9C48A);
     const khakiDark = Color(0xFFB89F5E);
@@ -326,6 +339,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawCircle(const Offset(50, 3), 2.4, Paint()..color = khakiDark);
   }
 
+  // '여행 뱃지 패치' 아이템 그리기
   void _paintBadge(Canvas canvas) {
     const center = Offset(66, 90);
     canvas.drawCircle(center, 6.5, Paint()..color = Colors.white);
@@ -340,6 +354,7 @@ class _TigoPainter extends CustomPainter {
     canvas.drawPath(_starPath(center, 5, 2.2, 5), Paint()..color = const Color(0xFFE0483E));
   }
 
+  // 프리미엄 스킨 장착 시 반짝이 효과 그리기
   void _paintSparkles(Canvas canvas, Color color) {
     final paint = Paint()..color = color;
     for (final p in const [Offset(14, 30), Offset(87, 26), Offset(89, 62)]) {
@@ -347,6 +362,7 @@ class _TigoPainter extends CustomPainter {
     }
   }
 
+  // 별 모양 경로 생성 (뱃지 아이템에 사용)
   Path _starPath(Offset center, double outerR, double innerR, int points) {
     final path = Path();
     final step = math.pi / points;
@@ -364,6 +380,7 @@ class _TigoPainter extends CustomPainter {
     return path;
   }
 
+  // 반짝임(별똥별) 모양 경로 생성
   Path _sparklePath(Offset c, double r) {
     return Path()
       ..moveTo(c.dx, c.dy - r)

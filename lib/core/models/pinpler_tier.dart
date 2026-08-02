@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 enum PinplerTier { seed, active, veteran, master }
 
 extension PinplerTierX on PinplerTier {
+  // 등록한 핀 개수를 기준으로 해당하는 등급을 계산
   static PinplerTier fromPinCount(int count) {
     if (count >= 60) return PinplerTier.master;
     if (count >= 30) return PinplerTier.veteran;

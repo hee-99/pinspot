@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+// 앱 전역 다국어(한/영/일/중) 문자열을 관리하는 클래스.
+// ARB/gen 파일을 쓰지 않고 파일 하단 _strings Map에 언어별 키-값을 직접 관리한다.
+// 새 문자열을 추가할 때는 ko/en/ja/zh 4개 언어 섹션 모두에 키를 넣어야 한다.
 class AppLocalizations {
   final String languageCode;
   AppLocalizations(this.languageCode);
 
+  // BuildContext에서 현재 언어의 AppLocalizations 인스턴스를 꺼냄 (없으면 한국어 기본값)
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)
         ?? AppLocalizations('ko');
@@ -15,9 +19,11 @@ class AppLocalizations {
     Locale('ko'), Locale('en'), Locale('ja'), Locale('zh'),
   ];
 
+  // 현재 언어의 문자열을 조회, 없으면 영어로 폴백, 그마저 없으면 키 자체를 반환
   String _t(String key) =>
       _strings[languageCode]?[key] ?? _strings['en']?[key] ?? key;
 
+  // 문자열 내 {param} 형태의 자리표시자를 실제 값으로 치환
   String _tp(String key, Map<String, String> params) {
     var v = _t(key);
     params.forEach((k, val) => v = v.replaceAll('{$k}', val));
@@ -210,6 +216,7 @@ class AppLocalizations {
 
 // ── Delegate ─────────────────────────────────────────────────────────────────
 
+// Flutter의 localization 시스템에 AppLocalizations를 연결해주는 delegate
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
@@ -228,7 +235,9 @@ class _AppLocalizationsDelegate
 
 // ── Translations ─────────────────────────────────────────────────────────────
 
+// 언어별 문자열 데이터. 각 언어 Map은 동일한 키 집합을 가져야 하며, 카테고리별 // 주석으로 구분되어 있음.
 const _strings = <String, Map<String, String>>{
+  // ── 한국어 ──────────────────────────────────────────────────────────────────
   'ko': {
     // Navigation
     'nav_feed': '피드',
@@ -393,6 +402,7 @@ const _strings = <String, Map<String, String>>{
     'days_ago': '{n}일 전',
   },
 
+  // ── 영어 ────────────────────────────────────────────────────────────────────
   'en': {
     // Navigation
     'nav_feed': 'Feed',
@@ -557,6 +567,7 @@ const _strings = <String, Map<String, String>>{
     'days_ago': '{n}d ago',
   },
 
+  // ── 일본어 ──────────────────────────────────────────────────────────────────
   'ja': {
     // Navigation
     'nav_feed': 'フィード',
@@ -721,6 +732,7 @@ const _strings = <String, Map<String, String>>{
     'days_ago': '{n}日前',
   },
 
+  // ── 중국어 ──────────────────────────────────────────────────────────────────
   'zh': {
     // Navigation
     'nav_feed': '动态',
