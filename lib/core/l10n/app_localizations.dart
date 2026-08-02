@@ -95,6 +95,13 @@ class AppLocalizations {
   String myPinsCount(int n) => _tp('my_pins_count', {'n': '$n'});
   String categoryPlaces(String cat) => _tp('category_places', {'cat': cat});
 
+  // ── Notification Settings ──────────────────────────────────────────────────
+  String get notificationFollowPinTitle => _t('notification_follow_pin_title');
+  String get notificationFollowPinDesc => _t('notification_follow_pin_desc');
+  String get notificationInboxTitle => _t('notification_inbox_title');
+  String get notificationEmptyTitle => _t('notification_empty_title');
+  String get notificationEmptyDesc => _t('notification_empty_desc');
+
   // ── Feed ────────────────────────────────────────────────────────────────────
   String get feedTabAll => _t('feed_tab_all');
   String get feedTabFollowing => _t('feed_tab_following');
@@ -305,6 +312,12 @@ const _strings = <String, Map<String, String>>{
     'view_all': '전체보기',
     'my_pins_count': '내 핀 {n}개',
     'category_places': '{cat} 장소',
+    // Notification Settings
+    'notification_follow_pin_title': '팔로우한 사람 핀 등록 알림',
+    'notification_follow_pin_desc': '팔로우한 사람이 새 핀을 등록하면 알려드려요',
+    'notification_inbox_title': '알림함',
+    'notification_empty_title': '아직 알림이 없어요',
+    'notification_empty_desc': '팔로우한 사람이 핀을 등록하면\n여기에서 확인할 수 있어요',
     // Feed
     'feed_tab_all': '전체',
     'feed_tab_following': '팔로잉',
@@ -470,6 +483,12 @@ const _strings = <String, Map<String, String>>{
     'view_all': 'View All',
     'my_pins_count': 'My Pins: {n}',
     'category_places': '{cat} Places',
+    // Notification Settings
+    'notification_follow_pin_title': 'New Pin Alerts from Following',
+    'notification_follow_pin_desc': 'Get notified when someone you follow adds a new pin',
+    'notification_inbox_title': 'Notifications',
+    'notification_empty_title': 'No notifications yet',
+    'notification_empty_desc': 'When someone you follow adds a pin,\nit will show up here',
     // Feed
     'feed_tab_all': 'All',
     'feed_tab_following': 'Following',
@@ -635,6 +654,12 @@ const _strings = <String, Map<String, String>>{
     'view_all': '全て見る',
     'my_pins_count': 'マイピン {n}個',
     'category_places': '{cat}の場所',
+    // Notification Settings
+    'notification_follow_pin_title': 'フォロー中のピン登録通知',
+    'notification_follow_pin_desc': 'フォローしている人が新しいピンを登録するとお知らせします',
+    'notification_inbox_title': '通知',
+    'notification_empty_title': 'まだ通知がありません',
+    'notification_empty_desc': 'フォローしている人がピンを登録すると\nここに表示されます',
     // Feed
     'feed_tab_all': 'すべて',
     'feed_tab_following': 'フォロー中',
@@ -800,6 +825,12 @@ const _strings = <String, Map<String, String>>{
     'view_all': '查看全部',
     'my_pins_count': '我的坐标 {n}个',
     'category_places': '{cat}地点',
+    // Notification Settings
+    'notification_follow_pin_title': '关注者新增坐标提醒',
+    'notification_follow_pin_desc': '当你关注的人添加新坐标时通知你',
+    'notification_inbox_title': '通知',
+    'notification_empty_title': '暂无通知',
+    'notification_empty_desc': '当你关注的人添加坐标时\n将在这里显示',
     // Feed
     'feed_tab_all': '全部',
     'feed_tab_following': '关注',

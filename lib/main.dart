@@ -5,6 +5,7 @@ import 'package:pinspot/core/l10n/app_localizations.dart';
 import 'package:pinspot/design/theme/app_theme.dart';
 import 'package:pinspot/features/map/services/landmark_info_service.dart';
 import 'package:pinspot/account/settings/services/locale_service.dart';
+import 'package:pinspot/account/settings/services/notification_settings_service.dart';
 import 'package:pinspot/account/auth/screens/splash_screen.dart';
 
 // 빌드 시 --dart-define으로 주입되는 카카오 네이티브 앱 키
@@ -15,6 +16,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(nativeAppKey: _kakaoAppKey);
   await LocaleService.init();
+  await NotificationSettingsService.init();
   // 캐시 갱신은 앱 실행을 막지 않도록 결과를 기다리지 않고 백그라운드로 실행
   LandmarkInfoService.refreshStaleCacheInBackground().ignore();
   runApp(const PinspotApp());

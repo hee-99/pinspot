@@ -17,6 +17,7 @@ import 'package:pinspot/features/pin/services/pin_service.dart';
 import 'package:pinspot/design/utils/marker_builder.dart';
 import 'package:pinspot/account/auth/screens/login_screen.dart';
 import 'package:pinspot/account/settings/screens/language_test_screen.dart';
+import 'package:pinspot/account/settings/screens/notification_settings_screen.dart';
 import 'package:pinspot/features/tigo/screens/tigo_closet_screen.dart';
 import 'package:pinspot/features/home/screens/home_content_screen.dart';
 
@@ -322,7 +323,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             _SettingsItem(
               icon: Icons.notifications_outlined,
               label: l.notificationSettings,
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()));
+              },
             ),
             _SettingsItem(
               icon: Icons.lock_outline,
