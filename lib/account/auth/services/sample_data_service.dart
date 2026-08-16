@@ -1,21 +1,65 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pinspot/core/models/pin_model.dart';
 
-// 최초 실행 시 데모용 샘플 핀을 SharedPreferences에 미리 채워주는 서비스
+// 최초 실행 시 데모용 샘플 핀을 SharedPreferences에 미리 채워주는 서비스 (디버그 빌드 전용)
 class SampleDataService {
   static const _flagKey = 'sample_pins_seeded_v1';
   static const _pinsKey = 'saved_pins';
 
   // 아직 샘플 핀을 넣은 적이 없으면(플래그 미설정) 저장된 핀 목록에 샘플 핀들을 추가
+  // release 빌드에서는 실행되지 않음 — 실사용자 지도를 목업 데이터로 채우지 않기 위함
   static Future<void> seedIfEmpty() async {
+    if (!kDebugMode) return;
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_flagKey) == true) return;
-
-    final existing = prefs.getStringList(_pinsKey) ?? [];
-    final encoded = _samplePins.map((p) => json.encode(p.toJson())).toList();
-    await prefs.setStringList(_pinsKey, [...existing, ...encoded]);
+    await _insertSamplePins();
     await prefs.setBool(_flagKey, true);
+  }
+
+  // 관리자 화면에서 수동으로 호출하는 재시딩 — 빌드 모드와 무관하게 항상 실행
+  static Future<void> seedManually() async {
+    await _insertSamplePins();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_flagKey, true);
+  }
+
+  // 저장된 핀 목록에서 id가 'sample_'로 시작하는 샘플 핀만 전부 제거
+  static Future<int> clearSamplePins() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getStringList(_pinsKey) ?? [];
+    final kept = <String>[];
+    var removed = 0;
+    for (final raw in existing) {
+      final id = (json.decode(raw) as Map<String, dynamic>)['id'] as String?;
+      if (id != null && id.startsWith('sample_')) {
+        removed++;
+      } else {
+        kept.add(raw);
+      }
+    }
+    await prefs.setStringList(_pinsKey, kept);
+    return removed;
+  }
+
+  // 현재 저장된 핀 중 샘플 핀 개수
+  static Future<int> sampleCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getStringList(_pinsKey) ?? [];
+    return existing.where((raw) {
+      final id = (json.decode(raw) as Map<String, dynamic>)['id'] as String?;
+      return id != null && id.startsWith('sample_');
+    }).length;
+  }
+
+  static Future<void> _insertSamplePins() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getStringList(_pinsKey) ?? [];
+    final existingIds = existing.map((raw) => (json.decode(raw) as Map<String, dynamic>)['id'] as String?).toSet();
+    final toAdd = _samplePins.where((p) => !existingIds.contains(p.id));
+    final encoded = toAdd.map((p) => json.encode(p.toJson())).toList();
+    await prefs.setStringList(_pinsKey, [...existing, ...encoded]);
   }
 
   // 카테고리별(등산/계곡/캠핑/맛집/관광/사진/폐허) 데모용 샘플 핀 데이터

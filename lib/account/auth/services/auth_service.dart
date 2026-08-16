@@ -200,6 +200,8 @@ class AuthService {
   static const _emailAccountsKey = 'email_accounts';
 
   // 로컬에 저장된 이메일 계정 목록에서 이메일/비밀번호 해시를 대조해 로그인
+  // salt가 없는 구(舊) 계정(무salt SHA-256 시절 가입)은 레거시 해시로 한 번 검증한 뒤
+  // 로그인 성공 시 salt를 붙여 자동으로 마이그레이션한다.
   static Future<UserModel?> signInWithEmail(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_emailAccountsKey);
@@ -208,19 +210,34 @@ class AuthService {
     final key = email.toLowerCase().trim();
     if (!accounts.containsKey(key)) return null;
     final acct = accounts[key] as Map<String, dynamic>;
-    final inputHash = sha256.convert(utf8.encode(password)).toString();
-    if (acct['passwordHash'] != inputHash) return null;
+    final salt = acct['salt'] as String?;
+
+    if (salt != null) {
+      if (acct['passwordHash'] != _hashPassword(password, salt)) return null;
+    } else {
+      final legacyHash = sha256.convert(utf8.encode(password)).toString();
+      if (acct['passwordHash'] != legacyHash) return null;
+      final newSalt = _generateSalt();
+      accounts[key] = {
+        ...acct,
+        'salt': newSalt,
+        'passwordHash': _hashPassword(password, newSalt),
+      };
+      await prefs.setString(_emailAccountsKey, json.encode(accounts));
+    }
+
     final user = UserModel(
       id: 'email_$key',
       name: acct['name'] as String,
       email: email.trim(),
       provider: 'email',
+      isAdmin: acct['isAdmin'] as bool? ?? false,
     );
     await _save(user);
     return user;
   }
 
-  // 새 이메일 계정을 로컬 저장소에 등록 (비밀번호는 SHA-256 해시로 저장)
+  // 새 이메일 계정을 로컬 저장소에 등록 (비밀번호는 salt + SHA-256 해시로 저장)
   static Future<UserModel> registerWithEmail({
     required String name,
     required String email,
@@ -232,9 +249,11 @@ class AuthService {
         ? json.decode(raw) as Map<String, dynamic>
         : <String, dynamic>{};
     final key = email.toLowerCase().trim();
+    final salt = _generateSalt();
     accounts[key] = {
       'name': name.trim(),
-      'passwordHash': sha256.convert(utf8.encode(password)).toString(),
+      'salt': salt,
+      'passwordHash': _hashPassword(password, salt),
     };
     await prefs.setString(_emailAccountsKey, json.encode(accounts));
     final user = UserModel(
@@ -245,6 +264,38 @@ class AuthService {
     );
     await _save(user);
     return user;
+  }
+
+  // 현재 로그인된 계정의 관리자 모드를 켜고 끔 (설정 화면의 숨겨진 제스처로 진입)
+  // 이메일 계정은 email_accounts에도 반영해 재로그인 후에도 유지되도록 함
+  static Future<UserModel?> toggleAdminMode() async {
+    final current = await getUser();
+    if (current == null) return null;
+    final updated = UserModel(
+      id: current.id,
+      name: current.name,
+      email: current.email,
+      provider: current.provider,
+      photoUrl: current.photoUrl,
+      localPhotoPath: current.localPhotoPath,
+      isAdmin: !current.isAdmin,
+    );
+    await _save(updated);
+
+    if (current.provider == 'email' && current.email != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_emailAccountsKey);
+      if (raw != null) {
+        final accounts = json.decode(raw) as Map<String, dynamic>;
+        final key = current.email!.toLowerCase().trim();
+        if (accounts.containsKey(key)) {
+          final acct = accounts[key] as Map<String, dynamic>;
+          accounts[key] = {...acct, 'isAdmin': updated.isAdmin};
+          await prefs.setString(_emailAccountsKey, json.encode(accounts));
+        }
+      }
+    }
+    return updated;
   }
 
   // 현재 로그인된 사용자의 닉네임/프로필 사진 경로를 갱신
@@ -258,6 +309,7 @@ class AuthService {
       provider: current.provider,
       photoUrl: current.photoUrl,
       localPhotoPath: localPhotoPath ?? current.localPhotoPath,
+      isAdmin: current.isAdmin,
     );
     await _save(updated);
     return updated;
@@ -280,6 +332,15 @@ class AuthService {
     final rand = Random.secure();
     return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
   }
+
+  // 이메일 비밀번호용 랜덤 salt 생성 (레인보우 테이블 공격 방지)
+  static String _generateSalt([int length = 16]) {
+    final rand = Random.secure();
+    return base64UrlEncode(List<int>.generate(length, (_) => rand.nextInt(256)));
+  }
+
+  static String _hashPassword(String password, String salt) =>
+      sha256.convert(utf8.encode('$salt:$password')).toString();
 
   static String _uuid() => DateTime.now().millisecondsSinceEpoch.toString();
 }
