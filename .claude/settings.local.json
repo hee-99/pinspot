@@ -342,7 +342,13 @@
       "Bash(/c/Users/user/AppData/Local/Android/sdk/platform-tools/adb.exe -s emulator-5554 pull //sdcard/screen_final.png /c/dev/pinspot/.claude_scratch/20_final.png)",
       "Skill(claude-in-chrome)",
       "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe devices *)",
-      "WebFetch(domain:doi.org)"
+      "WebFetch(domain:doi.org)",
+      "Bash(timeout 25 /c/flutter/bin/flutter attach -d emulator-5554)",
+      "Bash(tee /c/Users/hanse/AppData/Local/Temp/claude/C--Users-hanse-pinspot/25e9ee35-3892-411c-b767-3acbf88a6b47/scratchpad/attach_reload.log)",
+      "Bash(/c/flutter/bin/flutter analyze *)",
+      "Bash($ADB shell *)",
+      "Bash(/c/Users/hanse/AppData/Local/Android/sdk/platform-tools/adb.exe shell *)",
+      "Bash(/c/Users/hanse/AppData/Local/Android/sdk/platform-tools/adb.exe exec-out *)"
     ]
   }
 }
