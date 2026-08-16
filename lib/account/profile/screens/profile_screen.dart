@@ -282,7 +282,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // 프로필 이름을 2초 내에 7번 연속 탭하면 관리자 모드를 켜고 끄는 숨겨진 제스처
+  // release 빌드(실제 배포)에서는 동작하지 않음 — 일반 유저가 우연히 켤 수 없도록 디버그 빌드 전용으로 제한
   Future<void> _onTitleTap() async {
+    if (!kDebugMode) return;
     final now = DateTime.now();
     if (_lastTitleTap == null || now.difference(_lastTitleTap!) > const Duration(seconds: 2)) {
       _titleTapCount = 0;
