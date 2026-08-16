@@ -11,6 +11,7 @@ import 'package:pinspot/account/settings/services/locale_service.dart';
 import 'package:pinspot/design/theme/app_theme.dart';
 import 'package:pinspot/design/theme/app_colors.dart';
 import 'package:pinspot/core/models/pin_model.dart';
+import 'package:pinspot/core/models/pin_rating_schema.dart';
 import 'package:pinspot/core/models/pinpler_tier.dart';
 import 'package:pinspot/core/models/user_model.dart';
 import 'package:pinspot/account/auth/services/auth_service.dart';
@@ -19,6 +20,7 @@ import 'package:pinspot/design/utils/marker_builder.dart';
 import 'package:pinspot/account/auth/screens/login_screen.dart';
 import 'package:pinspot/account/settings/screens/language_test_screen.dart';
 import 'package:pinspot/account/settings/screens/notification_settings_screen.dart';
+import 'package:pinspot/account/settings/screens/admin_screen.dart';
 import 'package:pinspot/features/tigo/screens/tigo_closet_screen.dart';
 import 'package:pinspot/features/tigo/services/tigo_service.dart';
 import 'package:pinspot/features/tigo/widgets/tigo_avatar.dart';
@@ -39,6 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<PinModel> _pins = [];
   bool _loading = true;
   String? _mapStyle;
+  int _titleTapCount = 0;
+  DateTime? _lastTitleTap;
 
   @override
   void initState() {
@@ -280,6 +284,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // 프로필 이름을 2초 내에 7번 연속 탭하면 관리자 모드를 켜고 끄는 숨겨진 제스처
+  Future<void> _onTitleTap() async {
+    final now = DateTime.now();
+    if (_lastTitleTap == null || now.difference(_lastTitleTap!) > const Duration(seconds: 2)) {
+      _titleTapCount = 0;
+    }
+    _lastTitleTap = now;
+    _titleTapCount++;
+    if (_titleTapCount < 7) return;
+    _titleTapCount = 0;
+    final updated = await AuthService.toggleAdminMode();
+    if (!mounted || updated == null) return;
+    setState(() => _user = updated);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(updated.isAdmin ? '관리자 모드가 켜졌어요' : '관리자 모드가 꺼졌어요'),
+    ));
+  }
+
   // 설정 메뉴(프로필 수정/언어/번역테스트/알림/개인정보/로그아웃)를 바텀시트로 표시
   void _showSettings() {
     final l = AppLocalizations.of(context);
@@ -337,6 +359,18 @@ class _ProfileScreenState extends State<ProfileScreen>
               label: l.privacySettings,
               onTap: () => Navigator.pop(context),
             ),
+            if (_user?.isAdmin == true) ...[
+              const Divider(height: 1, indent: 20, endIndent: 20),
+              _SettingsItem(
+                icon: Icons.admin_panel_settings_outlined,
+                label: '관리자',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const AdminScreen()));
+                },
+              ),
+            ],
             const Divider(height: 1, indent: 20, endIndent: 20),
             _SettingsItem(
               icon: Icons.logout,
@@ -368,9 +402,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        title: Text(
-          _user?.name ?? l.navProfile,
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _kText1),
+        title: GestureDetector(
+          onTap: _onTitleTap,
+          child: Text(
+            _user?.name ?? l.navProfile,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: _kText1),
+          ),
         ),
         actions: [
           IconButton(
@@ -1078,14 +1115,16 @@ class _ContentTabState extends State<_ContentTab> {
   }
 }
 
-// 그리드에 표시되는 핀 썸네일 (사진 + 카테고리 라벨)
+// 그리드에 표시되는 핀 썸네일 (사진 + 카테고리 라벨) — 탭하면 상세 바텀시트 표시
 class _PinThumbnail extends StatelessWidget {
   final PinModel pin;
   const _PinThumbnail({required this.pin});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return GestureDetector(
+      onTap: () => _showPinDetailSheet(context, pin),
+      child: Stack(
       fit: StackFit.expand,
       children: [
         _buildPhoto(),
@@ -1118,6 +1157,7 @@ class _PinThumbnail extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -1143,6 +1183,123 @@ class _PinThumbnail extends StatelessWidget {
       child: const Center(child: Icon(Icons.location_on, size: 28, color: AppColors.primary)),
     );
   }
+}
+
+// 핀 그리드 썸네일을 탭했을 때 사진·제목·설명·등급을 보여주는 상세 바텀시트
+void _showPinDetailSheet(BuildContext context, PinModel pin) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (ctx, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListView(
+          controller: scrollCtrl,
+          padding: EdgeInsets.zero,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            if (pin.photoPath != null && !kIsWeb)
+              Image.file(
+                File(pin.photoPath!),
+                width: double.infinity,
+                height: 190,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(pin.title,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.neutral900)),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(pin.category,
+                                  style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (pin.description.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(pin.description,
+                        style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.6)),
+                  ],
+                  if (pin.ratings != null && pin.ratings!.isNotEmpty) ...[
+                    Builder(builder: (_) {
+                      final dims = PinRatingSchema.forCategory(pin.category)
+                          .where((d) => pin.ratings!.containsKey(d.key))
+                          .toList();
+                      if (dims.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: dims.map((dim) {
+                            final val = pin.ratings![dim.key]!;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.neutral100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text('${dim.emoji} ${dim.label}  ${dim.labelFor(val)}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.neutral900)),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 // ─── 탭 2: 나의 지도 ───────────────────────────────────────────────────────────
@@ -1452,37 +1609,40 @@ class _PlaceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 130,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(5),
+    return GestureDetector(
+      onTap: () => _showPinDetailSheet(context, pin),
+      child: Container(
+        width: 130,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: _kBg,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                pin.category,
+                style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600),
+              ),
             ),
-            child: Text(
-              pin.category,
-              style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600),
+            const SizedBox(height: 6),
+            Text(
+              pin.title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kText1),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            pin.title,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kText1),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1517,29 +1677,32 @@ class _SavedTab extends StatelessWidget {
       itemCount: pins.length,
       itemBuilder: (context, index) {
         final pin = pins[index];
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              pin.photoPath != null && !kIsWeb
-                  ? Image.file(File(pin.photoPath!), fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: AppColors.primaryLight))
-                  : Container(color: AppColors.primaryLight,
-                      child: const Center(child: Icon(Icons.bookmark_outline, size: 28, color: AppColors.primary))),
-              Positioned(
-                bottom: 6, left: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(4),
+        return GestureDetector(
+          onTap: () => _showPinDetailSheet(context, pin),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                pin.photoPath != null && !kIsWeb
+                    ? Image.file(File(pin.photoPath!), fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: AppColors.primaryLight))
+                    : Container(color: AppColors.primaryLight,
+                        child: const Center(child: Icon(Icons.bookmark_outline, size: 28, color: AppColors.primary))),
+                Positioned(
+                  bottom: 6, left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(pin.category,
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
                   ),
-                  child: Text(pin.category,
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

@@ -71,6 +71,15 @@ class _EmailAuthScreenState extends State<EmailAuthScreen>
     }
   }
 
+  // 비밀번호가 10자 이상 + 소문자/대문자/숫자/특수문자를 모두 포함하는지 검사
+  bool _isPasswordStrong(String pass) {
+    return pass.length >= 10 &&
+        RegExp(r'[a-z]').hasMatch(pass) &&
+        RegExp(r'[A-Z]').hasMatch(pass) &&
+        RegExp(r'[0-9]').hasMatch(pass) &&
+        RegExp(r'[^a-zA-Z0-9]').hasMatch(pass);
+  }
+
   // 이름/이메일/비밀번호 형식 검증 후 이메일 중복 확인, 신규 계정 등록
   Future<void> _doRegister() async {
     final name = _regNameCtrl.text.trim();
@@ -87,8 +96,8 @@ class _EmailAuthScreenState extends State<EmailAuthScreen>
       setState(() => _error = '올바른 이메일 형식이 아니에요');
       return;
     }
-    if (pass.length < 6) {
-      setState(() => _error = '비밀번호는 6자 이상이어야 해요');
+    if (!_isPasswordStrong(pass)) {
+      setState(() => _error = '비밀번호는 영문 대/소문자, 숫자, 특수문자를 모두 포함해 10자 이상이어야 해요');
       return;
     }
     if (pass != confirm) {
@@ -274,7 +283,7 @@ class _RegisterTab extends StatelessWidget {
               keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 14),
           _Field(
-            ctrl: passCtrl, label: '비밀번호', hint: '6자 이상',
+            ctrl: passCtrl, label: '비밀번호', hint: '대소문자+숫자+특수문자 포함 10자 이상',
             obscure: !passVisible,
             suffix: IconButton(
               icon: Icon(passVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,

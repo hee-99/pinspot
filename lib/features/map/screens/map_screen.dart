@@ -16,23 +16,8 @@ import 'package:pinspot/design/utils/marker_builder.dart';
 import 'package:pinspot/features/tigo/models/tigo_model.dart';
 import 'package:pinspot/features/tigo/services/tigo_service.dart';
 import 'package:pinspot/features/map/data/followed_pinplers.dart';
-
-// 하드코딩된 데모용 핀(장소) — 정적 마커 데이터
-class _Pin {
-  final LatLng pos;
-  final String name;
-  final String category;
-  const _Pin(this.pos, this.name, this.category);
-}
-
-// 하드코딩된 위험 지역 데이터 — 급류/낙석 등 경고용 마커
-class _DangerZone {
-  final LatLng pos;
-  final String name;
-  final String reason;
-  final String icon;
-  const _DangerZone(this.pos, this.name, this.reason, this.icon);
-}
+import 'package:pinspot/features/pin/screens/create_pin_screen.dart';
+import 'package:pinspot/account/settings/screens/notification_settings_screen.dart';
 
 // 지도 화면 — Google Maps 표시, GPS 현위치 추적, 저장된 핀 마커, 카테고리 필터, 경로 안내를 담당
 class MapScreen extends StatefulWidget {
@@ -69,26 +54,6 @@ class _MapScreenState extends State<MapScreen> {
 
   static const _defaultPos = LatLng(37.5665, 126.9780);
 
-  // 데모용 정적 핀 목록
-  static final _pins = [
-    _Pin(const LatLng(37.5796, 126.9770), '경복궁 옆 골목', '문화재'),
-    _Pin(const LatLng(37.5512, 126.9882), '서울 숨겨진 조각상', '조각상'),
-    _Pin(const LatLng(37.6176, 127.0060), '북한산 뷰포인트', '등산'),
-    _Pin(const LatLng(37.5443, 127.0557), '성수동 폐공장', '폐허'),
-    _Pin(const LatLng(37.5798, 127.0018), '낙산공원 야경', '사진 명소'),
-  ];
-
-  // 데모용 위험 지역 목록
-  static const _dangerZones = [
-    _DangerZone(LatLng(37.0742, 127.0844), '살목지 계곡', '급류·익수 위험 구간. 우기 시 접근 금지.', '🌊'),
-    _DangerZone(LatLng(37.7455, 128.8677), '한탄강 급류 구간', '수심 급변·암초 다수. 사망 사고 발생지.', '⚡'),
-    _DangerZone(LatLng(37.6568, 126.9980), '북한산 인수봉', '낙석·추락 위험. 우천 시 출입 통제.', '🪨'),
-    _DangerZone(LatLng(38.1197, 128.4661), '설악산 공룡능선', '강풍·낙석 위험. 비인가 루트 접근 금지.', '⛰️'),
-    _DangerZone(LatLng(35.3349, 127.7305), '지리산 천왕봉 북능', '겨울 결빙·폭풍 위험 구간.', '🧊'),
-    _DangerZone(LatLng(36.5685, 128.7289), '주왕산 급경사 폭포', '미끄럼·낙하 위험. 우기 접근 금지.', '💧'),
-    _DangerZone(LatLng(35.1796, 129.0756), '부산 해운대 이안류', '이안류 발생 구간. 해수욕 금지 구역.', '🌊'),
-  ];
-
   // 카테고리명에 따라 마커 색상(hue) 결정
   double _categoryHue(String category) {
     if (category.contains('위험')) return BitmapDescriptor.hueRed;
@@ -98,20 +63,6 @@ class _MapScreenState extends State<MapScreen> {
     if (category.contains('폐허') || category.contains('어반')) return BitmapDescriptor.hueViolet;
     if (category.contains('관광') || category.contains('조각')) return BitmapDescriptor.hueYellow;
     return BitmapDescriptor.hueGreen;
-  }
-
-  // 카테고리/검색어로 필터링된 정적 데모 핀 목록
-  List<_Pin> get _filteredStaticPins {
-    var list = _selectedCategory == '전체'
-        ? _pins
-        : _pins.where((p) => p.category == _selectedCategory).toList();
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      list = list.where((p) =>
-        p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q),
-      ).toList();
-    }
-    return list;
   }
 
   // 카테고리/검색어로 필터링된 사용자 저장 핀 목록 (팔로우한 다른 핀플러의 지도를 보는 중이면 내 핀은 숨김)
@@ -129,19 +80,12 @@ class _MapScreenState extends State<MapScreen> {
     return list;
   }
 
-  int get _visiblePinCount => _filteredStaticPins.length + _filteredSavedPins.length;
+  int get _visiblePinCount => _filteredSavedPins.length;
 
-  // 지도 마커 빌드 — 정적 핀 + 저장된 핀 + 위험 지역 + 내 위치 마커를 합쳐 반환
+  // 지도 마커 빌드 — 저장된 핀 + 내 위치 마커를 합쳐 반환
   Set<Marker> get _markers {
-    final staticList = _filteredStaticPins;
     final savedList = _filteredSavedPins;
 
-    final staticMarkers = staticList.map((pin) => Marker(
-      markerId: MarkerId('static_${pin.name}'),
-      position: pin.pos,
-      icon: BitmapDescriptor.defaultMarkerWithHue(_categoryHue(pin.category)),
-      onTap: () => _showPinSheet(pin),
-    )).toSet();
     final savedMarkers = savedList.map((pin) {
       return Marker(
         markerId: MarkerId('saved_${pin.id}'),
@@ -150,14 +94,6 @@ class _MapScreenState extends State<MapScreen> {
         onTap: () => _showSavedPinSheet(pin),
       );
     }).toSet();
-
-    // 위험 지역 마커 (카테고리 필터 무시, 항상 표시)
-    final dangerMarkers = _dangerZones.map((dz) => Marker(
-      markerId: MarkerId('danger_${dz.name}'),
-      position: dz.pos,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      onTap: () => _showDangerSheet(dz),
-    )).toSet();
 
     // 내 위치: 파란 점 대신 티고 아바타 마커
     final myLocationMarker = (_currentPos != null && _myLocationIcon != null)
@@ -187,7 +123,7 @@ class _MapScreenState extends State<MapScreen> {
       )).toSet();
     }
 
-    return {...staticMarkers, ...savedMarkers, ...dangerMarkers, ...myLocationMarker, ...followedMarkers};
+    return {...savedMarkers, ...myLocationMarker, ...followedMarkers};
   }
 
   // 팔로우 아바타 스트립에서 사람을 선택 — null이면 "나"(내 핀), 아니면 해당 핀플러의 핀으로 지도 전환
@@ -344,37 +280,6 @@ class _MapScreenState extends State<MapScreen> {
     ctrl.animateCamera(CameraUpdate.newLatLngZoom(_currentPos!, 15));
   }
 
-  // 정적 데모 핀 상세 바텀시트 표시
-  void _showPinSheet(_Pin pin) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _PinBottomSheet(
-        pin: pin,
-        currentPos: _currentPos,
-        onNavigate: () {
-          Navigator.pop(context);
-          _startNavigation(pin.pos, pin.name);
-        },
-        onShare: () {
-          Navigator.pop(context);
-          _sharePin(pin.pos, pin.name, pin.category);
-        },
-      ),
-    );
-  }
-
-  // 위험 지역 상세 바텀시트 표시
-  void _showDangerSheet(_DangerZone dz) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _DangerBottomSheet(dangerZone: dz),
-    );
-  }
-
   // 사용자가 저장한 핀의 상세 바텀시트 표시 (드래그로 크기 조절 가능)
   void _showSavedPinSheet(PinModel pin) {
     showModalBottomSheet(
@@ -482,7 +387,6 @@ class _MapScreenState extends State<MapScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final positions = [
-        ..._filteredStaticPins.map((p) => p.pos),
         ..._filteredSavedPins.map((p) => LatLng(p.lat, p.lng)),
       ];
       if (positions.isEmpty || !mounted) {
@@ -629,6 +533,26 @@ class _MapScreenState extends State<MapScreen> {
                                   color: _showFollowed ? Colors.white : AppColors.neutral600,
                                   size: 21,
                                 ),
+                              ),
+                            ),
+                          ),
+                          // 알림 버튼 — 알림 설정/알림함 화면으로 이동
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),
+                              child: Container(
+                                width: 48, height: 48,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4)),
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+                                  ],
+                                ),
+                                child: const Icon(Icons.notifications_none_rounded, color: AppColors.neutral600, size: 22),
                               ),
                             ),
                           ),
@@ -812,9 +736,9 @@ class _MapScreenState extends State<MapScreen> {
                 onCancel: _cancelNavigation,
               ),
             ),
-          // 내 위치 버튼
+          // 내 위치 버튼 — 우측 하단, 카메라 버튼 바로 위
           Positioned(
-            bottom: (_isNavigating || _navLoading) ? 220 : 160,
+            bottom: (_isNavigating || _navLoading) ? 234 : 104,
             right: 16,
             child: GestureDetector(
               onTap: _moveToMyLocation,
@@ -836,12 +760,28 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          // ── 하단 통계 카드 ──
-          if (_travelStats != null)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _MapStatsCard(stats: _travelStats!),
+          // 핀 등록(카메라) 버튼 — 우측 하단 가장자리, 엄지로 바로 누를 수 있는 위치
+          Positioned(
+            bottom: (_isNavigating || _navLoading) ? 158 : 28,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CreatePinScreen())),
+              child: Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.40), blurRadius: 14, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 28),
+              ),
             ),
+          ),
+          // 하단 통계 카드(방문한 도시/발톱 자국/촬영한 사진)는 지도에서 일단 제거 —
+          // 다른 화면으로 옮길지 논의 중, _MapStatsCard 위젯 자체는 재사용을 위해 남겨둠
           // 위치 에러 배너 (탭하면 재시도)
           if (_locationError != null && !_locationLoading)
             Positioned(
@@ -993,147 +933,6 @@ class _FollowedAvatar extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────
-// 핀 정보 바텀시트
-// ──────────────────────────────────────────────
-class _PinBottomSheet extends StatelessWidget {
-  final _Pin pin;
-  final LatLng? currentPos;
-  final VoidCallback onNavigate;
-  final VoidCallback onShare;
-
-  const _PinBottomSheet({
-    required this.pin,
-    required this.currentPos,
-    required this.onNavigate,
-    required this.onShare,
-  });
-
-  // 현재 위치에서 핀까지의 거리를 km/m 단위 문자열로 변환
-  String? get _distanceLabel {
-    if (currentPos == null) return null;
-    final m = Geolocator.distanceBetween(
-      currentPos!.latitude, currentPos!.longitude,
-      pin.pos.latitude, pin.pos.longitude,
-    );
-    return m >= 1000
-        ? '${(m / 1000).toStringAsFixed(1)}km'
-        : '${m.toStringAsFixed(0)}m';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dist = _distanceLabel;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16, right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 18),
-              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46, height: 46,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(pin.name,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.neutral900)),
-                            const SizedBox(height: 5),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(pin.category,
-                                      style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                                ),
-                                if (dist != null) ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.near_me_rounded, size: 12, color: AppColors.neutral400),
-                                  const SizedBox(width: 3),
-                                  Text(dist, style: const TextStyle(fontSize: 12, color: AppColors.neutral400)),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: onNavigate,
-                          icon: const Icon(Icons.directions_walk_rounded, size: 18, color: Colors.white),
-                          label: const Text('길찾기',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 50, height: 50,
-                        decoration: BoxDecoration(
-                          color: AppColors.neutral100,
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: IconButton(
-                          onPressed: onShare,
-                          icon: const Icon(Icons.ios_share_outlined, color: AppColors.neutral900, size: 20),
-                          tooltip: '공유',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1648,102 +1447,6 @@ class _PinRatingsDisplay extends StatelessWidget {
           );
         }),
       ],
-    );
-  }
-}
-
-// ──────────────────────────────────────────────
-// 위험 지역 바텀시트
-// ──────────────────────────────────────────────
-class _DangerBottomSheet extends StatelessWidget {
-  final _DangerZone dangerZone;
-  const _DangerBottomSheet({required this.dangerZone});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 16, right: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, -4))],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 18),
-              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Container(
-                      width: 50, height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(14)),
-                      child: Center(child: Text(dangerZone.icon, style: const TextStyle(fontSize: 26))),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDC2626), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('⚠️ 위험 지역',
-                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w800)),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(dangerZone.name,
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                      ]),
-                    ),
-                  ]),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3F3),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFCDD2)),
-                    ),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFDC2626)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(dangerZone.reason,
-                            style: const TextStyle(fontSize: 13, color: Color(0xFFB71C1C), height: 1.55)),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity, height: 50,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.check_circle_outline, size: 18),
-                      label: const Text('확인했습니다', style: TextStyle(fontWeight: FontWeight.w700)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                        side: const BorderSide(color: Color(0xFFDC2626)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -5,11 +5,10 @@ import 'package:pinspot/design/theme/app_colors.dart';
 import 'package:pinspot/features/map/screens/map_screen.dart';
 import 'package:pinspot/features/community/screens/community_screen.dart';
 import 'package:pinspot/account/profile/screens/profile_screen.dart';
-import 'package:pinspot/features/pin/screens/create_pin_screen.dart';
 import 'package:pinspot/features/tigo/services/tigo_service.dart';
 import 'package:pinspot/features/tigo/widgets/tigo_unlock_dialog.dart';
 
-// 앱의 메인 셸 화면 — 4탭 바텀 네비게이션과 IndexedStack으로 탭별 화면 전환 관리
+// 앱의 메인 셸 화면 — 3탭 바텀 네비게이션과 IndexedStack으로 탭별 화면 전환 관리
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,11 +17,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 0: 카메라(modal), 1: 지도, 2: 커뮤니티, 3: 프로필
-  int _currentIndex = 1; // 기본: 지도
+  // 0: 지도, 1: 커뮤니티, 2: 프로필 (핀 등록은 지도 화면 안의 카메라 버튼으로 이동)
+  int _currentIndex = 0; // 기본: 지도
 
   // 첫 방문 시에만 실제 위젯을 빌드 (lazy init)
-  final Set<int> _builtIndices = {1};
+  final Set<int> _builtIndices = {0};
 
   @override
   void initState() {
@@ -80,15 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 바텀 네비 탭 클릭 처리 — 카메라 탭은 모달 push, 나머지는 IndexedStack 전환
+  // 바텀 네비 탭 클릭 처리 — IndexedStack 전환
   void _onTabTapped(int index) {
-    if (index == 0) {
-      // 카메라: 모달로 열기, 현재 탭 유지
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const CreatePinScreen()),
-      );
-      return;
-    }
     setState(() {
       _builtIndices.add(index); // 첫 방문 시 위젯 빌드 트리거
       _currentIndex = index;
@@ -103,10 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          const SizedBox.shrink(),
           const MapScreen(),
-          _builtIndices.contains(2) ? const CommunityScreen() : const SizedBox.shrink(),
-          _builtIndices.contains(3) ? const ProfileScreen()   : const SizedBox.shrink(),
+          _builtIndices.contains(1) ? const CommunityScreen() : const SizedBox.shrink(),
+          _builtIndices.contains(2) ? const ProfileScreen()   : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: _BottomNav(
@@ -117,13 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── Bottom Navigation (4탭: 카메라·지도·커뮤니티·프로필) ──────────────────────────
+// ── Bottom Navigation (3탭: 지도·커뮤니티·프로필, 핀 등록은 지도 화면 내 카메라 버튼으로) ──
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
-
-  static const _orange = Color(0xFFFF8A00);
 
   @override
   Widget build(BuildContext context) {
@@ -139,32 +128,9 @@ class _BottomNav extends StatelessWidget {
           height: 64,
           child: Row(
             children: [
-              // 카메라 탭 (특별 스타일 — 항상 orange circle)
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(
-                          color: _orange,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: _orange.withValues(alpha: 0.40), blurRadius: 12, offset: const Offset(0, 4)),
-                          ],
-                        ),
-                        child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 22),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              _NavItem(icon: Icons.map_outlined,        activeIcon: Icons.map,        label: '지도',    index: 1, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.people_outline,      activeIcon: Icons.people,     label: '커뮤니티', index: 2, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline,      activeIcon: Icons.person,     label: '프로필',  index: 3, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.map_outlined,        activeIcon: Icons.map,        label: '지도',    index: 0, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.people_outline,      activeIcon: Icons.people,     label: '커뮤니티', index: 1, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline,      activeIcon: Icons.person,     label: '프로필',  index: 2, current: currentIndex, onTap: onTap),
             ],
           ),
         ),

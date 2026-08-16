@@ -8,6 +8,7 @@ class UserModel {
   final String provider;
   final String? photoUrl;
   final String? localPhotoPath;
+  final bool isAdmin;
 
   const UserModel({
     required this.id,
@@ -16,6 +17,7 @@ class UserModel {
     required this.provider,
     this.photoUrl,
     this.localPhotoPath,
+    this.isAdmin = false,
   });
 
   String get displayName => name.isNotEmpty ? name : '핀스팟 유저';
@@ -28,6 +30,7 @@ class UserModel {
     'provider': provider,
     'photoUrl': photoUrl,
     'localPhotoPath': localPhotoPath,
+    'isAdmin': isAdmin,
   };
 
   // JSON 맵을 UserModel로 역직렬화
@@ -38,6 +41,7 @@ class UserModel {
     provider: j['provider'] as String,
     photoUrl: j['photoUrl'] as String?,
     localPhotoPath: j['localPhotoPath'] as String?,
+    isAdmin: j['isAdmin'] as bool? ?? false,
   );
 
   // 파싱 실패 시 예외 대신 null을 반환하는 안전한 파싱 헬퍼

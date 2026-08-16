@@ -348,7 +348,32 @@
       "Bash(/c/flutter/bin/flutter analyze *)",
       "Bash($ADB shell *)",
       "Bash(/c/Users/hanse/AppData/Local/Android/sdk/platform-tools/adb.exe shell *)",
-      "Bash(/c/Users/hanse/AppData/Local/Android/sdk/platform-tools/adb.exe exec-out *)"
+      "Bash(/c/Users/hanse/AppData/Local/Android/sdk/platform-tools/adb.exe exec-out *)",
+      "Bash(gh repo *)",
+      "Bash(unzip -l \"/c/Users/user/OneDrive/바탕화면/files.zip\")",
+      "Bash(unzip *)",
+      "Bash(mkdir -p /tmp/pinspot_claude_pkg)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell df /data)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell df /)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell pm list packages)",
+      "Bash(export MSYS_NO_PATHCONV=1)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell df -h /data)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell 'df -h')",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell 'du -sh /data/* 2>/dev/null | sort -rh | head -20')",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell 'du -sk /data/* 2>/dev/null | sort -rn | head -20')",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell 'du -sk /data/user/0/* 2>/dev/null | sort -rn | head -25')",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 emu kill)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/emulator/emulator.exe -avd Pixel_8 -wipe-data)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe shell *)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell uiautomator dump /sdcard/ui.xml)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 pull /sdcard/ui.xml 'C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--dev-pinspot\\\\5ede2747-2ce7-4be3-9cc2-de6052d38f2b\\\\scratchpad\\\\ui.xml')",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 logcat -b crash -d -t 200)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 logcat -d -t 3000)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell pidof com.pinspot.app)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 logcat -d)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 reboot)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe wait-for-device *)"
     ]
   }
 }
