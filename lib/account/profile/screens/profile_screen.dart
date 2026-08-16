@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,7 +22,9 @@ import 'package:pinspot/account/settings/screens/language_test_screen.dart';
 import 'package:pinspot/account/settings/screens/notification_settings_screen.dart';
 import 'package:pinspot/account/settings/screens/admin_screen.dart';
 import 'package:pinspot/features/tigo/screens/tigo_closet_screen.dart';
-import 'package:pinspot/features/home/screens/home_content_screen.dart';
+import 'package:pinspot/features/tigo/services/tigo_service.dart';
+import 'package:pinspot/features/tigo/widgets/tigo_avatar.dart';
+import 'package:pinspot/features/map/screens/map_screen.dart';
 
 // 프로필 화면 — 유저 정보 헤더 + 티고 바로가기 + 3탭(전체/내 지도/저장됨)으로 구성
 class ProfileScreen extends StatefulWidget {
@@ -416,12 +419,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       body: NestedScrollView(
         headerSliverBuilder: (context, _) => [
+          // ① TIGO 캐릭터 히어로 카드
           SliverToBoxAdapter(
-            child: _ProfileHeader(user: _user, pinCount: _pins.length),
+            child: _TigoHeroCard(pinCount: _pins.length, pins: _pins),
           ),
+          // ② 사용자 정보 영역
           SliverToBoxAdapter(
-            child: _TigoQuickAccess(),
+            child: _UserInfoCard(user: _user, pinCount: _pins.length),
           ),
+          // ③ 나의 여행도감
+          SliverToBoxAdapter(
+            child: _TravelCollectionSection(pins: _pins),
+          ),
+          // ④ 도감/발자취/저장 탭
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabBarDelegate(tabController: _tabController),
@@ -475,14 +485,185 @@ class _SettingsItem extends StatelessWidget {
   }
 }
 
-// ─── 프로필 헤더 ───────────────────────────────────────────────────────────────
+// ─── ① TIGO 캐릭터 히어로 카드 ─────────────────────────────────────────────────
 
-// 프로필 상단 헤더 — 커버 배너, 아바타, 닉네임/등급/로그인 provider, 통계, 수정/공유 버튼
-class _ProfileHeader extends StatelessWidget {
+// 꾸민 티고 캐릭터를 크게 보여주는 최상단 히어로 카드 — 말풍선 + 레벨/칭호/진행바,
+// 탭하면 티고 꾸미기 화면으로 이동
+class _TigoHeroCard extends StatelessWidget {
+  final int pinCount;
+  final List<PinModel> pins;
+
+  const _TigoHeroCard({required this.pinCount, required this.pins});
+
+  // 임시 레벨 계산 로직 — 핀 3개당 레벨 1 (실제 성장 시스템 연동 전까지 사용)
+  int get _level => (pinCount ~/ 3) + 1;
+  double get _levelProgress => (pinCount % 3) / 3;
+
+  // 칭호는 레벨 구간별로 4단계만 구분
+  String get _title {
+    if (_level >= 20) return '전설의 티고';
+    if (_level >= 12) return '여행하는 티고';
+    if (_level >= 6) return '탐험하는 티고';
+    return '새싹 티고';
+  }
+
+  // 활동 상태별 말풍선 문구 (최근 24시간 내 핀 등록 시 다른 문구 표시)
+  String get _bubbleText {
+    if (pins.isEmpty) return '첫 발자국을 남겨볼까?';
+    final latest = pins.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
+    if (DateTime.now().difference(latest.createdAt).inHours < 24) return '새로운 발자국을 남겼어!';
+    return '이번엔 어디로 떠나볼까?';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final equipped = TigoService.instance.state.equipped;
+    final progressPercent = (_levelProgress * 100).round();
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const TigoClosetScreen())),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 4))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF2A1605), AppColors.primaryDark, AppColors.primary],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Opacity(opacity: 0.06, child: CustomPaint(painter: _DotGridPainter())),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 캐릭터 + "티고 꾸미기" 링크
+                  Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                        ),
+                        child: TigoAvatar(size: 100, equipped: equipped),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('티고 꾸미기',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.9))),
+                          const Icon(Icons.chevron_right_rounded, size: 15, color: Colors.white70),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  // 말풍선 + 레벨/칭호/진행바
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SpeechBubble(text: _bubbleText),
+                          const SizedBox(height: 16),
+                          Text('Lv.$_level $_title',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+                          const SizedBox(height: 7),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: _levelProgress,
+                              minHeight: 7,
+                              backgroundColor: Colors.white.withValues(alpha: 0.22),
+                              valueColor: const AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('$progressPercent%',
+                              style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.8))),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 캐릭터 옆에 표시되는 말풍선 (좌측에 꼬리)
+class _SpeechBubble extends StatelessWidget {
+  final String text;
+  const _SpeechBubble({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _BubbleTailPainter(),
+      child: Container(
+        margin: const EdgeInsets.only(left: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(text,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kText1)),
+      ),
+    );
+  }
+}
+
+// 말풍선 좌측 꼬리 삼각형을 그리는 페인터
+class _BubbleTailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 16)
+      ..lineTo(9, 11)
+      ..lineTo(9, 21)
+      ..close();
+    canvas.drawPath(path, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─── ② 사용자 정보 영역 ────────────────────────────────────────────────────────
+
+// 닉네임/등급/로그인 provider/공유 아이콘 + 핀·팔로워·팔로잉 통계 카드
+class _UserInfoCard extends StatelessWidget {
   final UserModel? user;
   final int pinCount;
 
-  const _ProfileHeader({required this.user, required this.pinCount});
+  const _UserInfoCard({required this.user, required this.pinCount});
 
   @override
   Widget build(BuildContext context) {
@@ -496,174 +677,85 @@ class _ProfileHeader extends StatelessWidget {
       _        => null,
     };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── 커버 배너 ─────────────────────────────────────────────
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            SizedBox(
-              height: 130,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF2A1605), AppColors.primaryDark, AppColors.primary],
-                        stops: [0.0, 0.5, 1.0],
-                      ),
-                    ),
-                  ),
-                  Opacity(
-                    opacity: 0.06,
-                    child: CustomPaint(painter: _DotGridPainter()),
-                  ),
-                ],
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Flexible(
+              child: Text(
+                user?.name ?? l.explorer,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5, color: _kText1),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            // 아바타 (커버와 겹침)
-            Positioned(
-              bottom: -40,
-              left: 20,
-              child: Container(
+            const SizedBox(width: 7),
+            _TierBadge(tier: PinplerTierX.fromPinCount(pinCount)),
+            if (providerLabel != null) ...[
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14)],
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(5),
                 ),
-                child: Stack(
-                  children: [
-                    _buildAvatar(),
-                    Positioned(
-                      bottom: 2, right: 2,
-                      child: Container(
-                        width: 24, height: 24,
-                        decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt, size: 13, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
+                child: Text(providerLabel,
+                    style: const TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.w700)),
+              ),
+            ],
+            const Spacer(),
+            // 공유 아이콘 버튼 (프로필 편집은 설정(⚙️)으로 이동)
+            GestureDetector(
+              onTap: () {},
+              child: Container(
+                width: 32, height: 32,
+                decoration: const BoxDecoration(color: _kBg, shape: BoxShape.circle),
+                child: const Icon(Icons.ios_share_rounded, size: 16, color: _kText2),
               ),
             ),
+          ]),
+          if (user?.email != null) ...[
+            const SizedBox(height: 3),
+            Text(user!.email!,
+                style: const TextStyle(color: _kText2, fontSize: 12),
+                overflow: TextOverflow.ellipsis),
           ],
-        ),
+          const SizedBox(height: 16),
 
-        // ── 유저 정보 ──────────────────────────────────────────────
-        Container(
-          color: _kCard,
-          padding: const EdgeInsets.fromLTRB(20, 54, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Flexible(
-                  child: Text(
-                    user?.name ?? l.explorer,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.6),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                _TierBadge(tier: PinplerTierX.fromPinCount(pinCount)),
-                if (providerLabel != null) ...[
-                  const SizedBox(width: 7),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(providerLabel,
-                        style: const TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.w700)),
-                  ),
-                ],
-              ]),
-              if (user?.email != null) ...[
-                const SizedBox(height: 3),
-                Text(user!.email!,
-                    style: const TextStyle(color: _kText2, fontSize: 12),
-                    overflow: TextOverflow.ellipsis),
-              ],
-              const SizedBox(height: 18),
-
-              // ── 통계 칩 ──────────────────────────────────────────
-              Row(children: [
-                _StatChip(label: l.pins, value: '$pinCount'),
-                const SizedBox(width: 10),
-                _StatChip(label: l.followers, value: '0'),
-                const SizedBox(width: 10),
-                _StatChip(label: l.following, value: '0'),
-              ]),
-
-              const SizedBox(height: 14),
-
-              // ── 버튼 ─────────────────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final state = context.findAncestorStateOfType<_ProfileScreenState>();
-                      await state?._editProfile();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.primary, width: 1.5),
-                      foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(l.editProfile, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFDEE1D9)),
-                      foregroundColor: AppTheme.textPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(l.share),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 6),
-            ],
+          // ── 통계 카드 (핀/팔로워/팔로잉을 하나로 묶음) ──────────────
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: _kBg,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(children: [
+              _StatChip(label: l.pins, value: '$pinCount'),
+              const _StatDivider(),
+              _StatChip(label: l.followers, value: '0'),
+              const _StatDivider(),
+              _StatChip(label: l.following, value: '0'),
+            ]),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
 
-  // 로컬 사진 → 네트워크 사진 → 기본 아이콘 순으로 우선순위를 두어 아바타를 렌더링
-  Widget _buildAvatar() {
-    if (user?.localPhotoPath != null && !kIsWeb) {
-      return CircleAvatar(
-        radius: 44,
-        backgroundImage: FileImage(File(user!.localPhotoPath!)),
-        backgroundColor: AppTheme.primary,
-        onBackgroundImageError: (_, __) {},
-      );
-    }
-    if (user?.photoUrl != null) {
-      return CircleAvatar(
-        radius: 44,
-        backgroundImage: NetworkImage(user!.photoUrl!),
-        backgroundColor: AppTheme.primary,
-      );
-    }
-    return const CircleAvatar(
-      radius: 44,
-      backgroundColor: AppTheme.primary,
-      child: Icon(Icons.person, size: 44, color: Colors.white),
-    );
-  }
+// 통계 카드 내부 구분선
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) => Container(width: 1, height: 30, color: const Color(0xFFEEEEEE));
 }
 
 // 핀플 등급(새싹/액티브/베테랑/마스터) 배지 위젯
@@ -710,7 +802,7 @@ class _DotGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter _) => false;
 }
 
-// 핀/팔로워/팔로잉 수를 보여주는 통계 칩 위젯
+// 핀/팔로워/팔로잉 수를 보여주는 통계 항목 (통계 카드 내부에서 사용, 배경은 카드가 담당)
 class _StatChip extends StatelessWidget {
   final String label;
   final String value;
@@ -718,12 +810,7 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return Expanded(
       child: Column(
         children: [
           Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _kText1, letterSpacing: -0.5)),
@@ -735,99 +822,15 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-
-// ─── 티고 바로가기 (도감 · 꾸미기) ────────────────────────────────────────────────
-
-// 티고(마스코트) 도감·꾸미기 화면으로 이동하는 바로가기 카드 2개를 보여주는 영역
-class _TigoQuickAccess extends StatelessWidget {
-  const _TigoQuickAccess();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _kCard,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: Row(
-        children: [
-          _QuickCard(
-            icon: '📖',
-            label: '도감',
-            subtitle: '티고의 기록',
-            onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const HomeContentScreen())),
-          ),
-          const SizedBox(width: 10),
-          _QuickCard(
-            icon: '🐯',
-            label: '티고 꾸미기',
-            subtitle: '아이템 장착',
-            onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const TigoClosetScreen())),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 티고 바로가기 카드 하나(아이콘+라벨+부제)
-class _QuickCard extends StatelessWidget {
-  final String icon, label, subtitle;
-  final VoidCallback onTap;
-  const _QuickCard({required this.icon, required this.label, required this.subtitle, required this.onTap});
-
-  static const _orange = Color(0xFFFF8A00);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: _kBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFEDE9E3), width: 1),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(
-                  color: _orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _kText1)),
-                    Text(subtitle, style: const TextStyle(fontSize: 10, color: _kText2)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 16, color: _kText3),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─── 탭바 ──────────────────────────────────────────────────────────────────────
 
-// NestedScrollView 상단에 고정되는 3탭(전체/내 지도/저장됨) 탭바 델리게이트
+// NestedScrollView 상단에 고정되는 3탭(도감/발자취/저장) 탭바 델리게이트
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabController tabController;
   const _TabBarDelegate({required this.tabController});
 
-  @override double get minExtent => 48;
-  @override double get maxExtent => 48;
+  @override double get minExtent => 58;
+  @override double get maxExtent => 58;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -840,10 +843,12 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
         indicatorColor: AppColors.primary,
         indicatorWeight: 2.5,
         dividerColor: _kBg,
+        labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         tabs: const [
-          Tab(icon: Icon(Icons.grid_on_outlined, size: 20)),
-          Tab(icon: Icon(Icons.map_outlined, size: 20)),
-          Tab(icon: Icon(Icons.bookmark_outline, size: 20)),
+          Tab(icon: Icon(Icons.grid_on_outlined, size: 20), text: '도감'),
+          Tab(icon: Icon(Icons.map_outlined, size: 20), text: '발자취'),
+          Tab(icon: Icon(Icons.bookmark_outline, size: 20), text: '저장'),
         ],
       ),
     );
@@ -853,7 +858,135 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_TabBarDelegate old) => false;
 }
 
-// ─── 탭 1: 내 핀 그리드 ──────────────────────────────────────────────────────
+// ─── ③ 나의 여행도감 ───────────────────────────────────────────────────────────
+
+// 여행도감 진행률(%) + 다음 발견 장소 카드를 보여주는 섹션.
+// 전체 후보 장소 목록 대비 등록한 핀 개수로 발견 진행도를 계산하는 임시 로직 —
+// 실제 장소별 발견 연동 전까지 사용.
+class _TravelCollectionSection extends StatelessWidget {
+  final List<PinModel> pins;
+  const _TravelCollectionSection({required this.pins});
+
+  static const _kCollectionSpots = [
+    '경복궁 옆 골목', '서울 숨겨진 조각상', '북한산 뷰포인트', '성수동 폐공장',
+    '낙산공원 야경', '한강 노을 명소', '전주 한옥마을 뒷길', '부산 감천문화마을',
+  ];
+
+  int get _discoveredCount =>
+      pins.length < _kCollectionSpots.length ? pins.length : _kCollectionSpots.length;
+  int get _progressPercent => ((_discoveredCount / _kCollectionSpots.length) * 100).round();
+  bool get _hasNextSpot => _discoveredCount < _kCollectionSpots.length;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_stories_rounded, color: AppColors.primary, size: 18),
+              const SizedBox(width: 6),
+              const Text('나의 여행도감',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _kText1)),
+              const Spacer(),
+              Text('$_progressPercent%',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: _progressPercent / 100,
+              minHeight: 8,
+              backgroundColor: _kBg,
+              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text('$_discoveredCount / ${_kCollectionSpots.length}개 발견',
+              style: const TextStyle(fontSize: 11, color: _kText2, fontWeight: FontWeight.w500)),
+          if (_hasNextSpot) ...[
+            const SizedBox(height: 14),
+            const _NextDiscoveryCard(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// "다음 발견 장소" 강조 카드 — 흐릿한 배경 + "?" + 안내 문구, 탭하면 지도로 이동
+class _NextDiscoveryCard extends StatelessWidget {
+  const _NextDiscoveryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen())),
+      child: Container(
+        height: 92,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(color: AppColors.primaryLight),
+              ),
+            ),
+            Positioned.fill(
+              child: Container(color: Colors.black.withValues(alpha: 0.30)),
+            ),
+            Row(
+              children: [
+                const SizedBox(width: 16),
+                Container(
+                  width: 46, height: 46,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85), shape: BoxShape.circle),
+                  child: const Center(
+                    child: Text('?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _kText1)),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('다음 발견 장소',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      const Text('아직 발견하지 않은 장소예요, 새로운 곳을 탐험해보세요!',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.4)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── 탭 1: 내 핀 그리드 (도감) ────────────────────────────────────────────────
 
 // 내 핀을 카테고리별로 필터링해 3열 그리드로 보여주는 탭
 class _ContentTab extends StatefulWidget {
@@ -1008,6 +1141,19 @@ class _PinThumbnail extends StatelessWidget {
               pin.category,
               style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
             ),
+          ),
+        ),
+        // 발견(발자국) 표시 오버레이 — 도감에 등록된 장소임을 표시
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Container(
+            width: 20, height: 20,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.pets, size: 12, color: Colors.white),
           ),
         ),
       ],

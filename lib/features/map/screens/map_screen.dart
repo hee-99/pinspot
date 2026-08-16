@@ -287,7 +287,7 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.45,
+        initialChildSize: 0.52,
         minChildSize: 0.28,
         maxChildSize: 0.88,
         expand: false,
@@ -1085,103 +1085,74 @@ class _SavedPinBottomSheet extends StatelessWidget {
     return m >= 1000 ? '${(m / 1000).toStringAsFixed(1)}km' : '${m.toStringAsFixed(0)}m';
   }
 
+  // 오늘/어제/N일 전/연월일 형태로 등록일 포맷팅
+  String _formatDate(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0) return '오늘 등록';
+    if (diff.inDays == 1) return '어제 등록';
+    if (diff.inDays < 7) return '${diff.inDays}일 전 등록';
+    return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} 등록';
+  }
+
+  bool get _hasPhoto => !kIsWeb && pin.photoPath != null && pin.photoPath!.isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     final dist = _distanceLabel;
+    final hasPhoto = _hasPhoto;
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4))],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [BoxShadow(color: Color(0x1F000000), blurRadius: 28, offset: Offset(0, -6))],
       ),
       clipBehavior: Clip.antiAlias,
       child: ListView(
         controller: scrollController,
         padding: EdgeInsets.zero,
         children: [
-          // 드래그 핸들
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
-              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          // 히어로 사진
-          if (pin.photoPath != null && !kIsWeb)
-            Image.file(
-              File(pin.photoPath!),
-              width: double.infinity,
-              height: 190,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
-          // 현재 위치 거리 배너
-          if (dist != null)
-            Container(
-              color: AppColors.primary.withValues(alpha: 0.07),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-              child: Row(
-                children: [
-                  const Icon(Icons.near_me_rounded, size: 13, color: AppColors.primary),
-                  const SizedBox(width: 5),
-                  Text(
-                    '현재 위치에서 $dist',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                  ),
-                ],
-              ),
-            ),
-          // 핀 정보
+          // 상단: 사진 있으면 히어로 이미지 위에 제목, 없으면 아이콘형 헤더
+          if (hasPhoto)
+            _PhotoHeader(pin: pin, onClose: () => Navigator.pop(context))
+          else
+            _PlainHeader(pin: pin, onClose: () => Navigator.pop(context)),
+          // 핀 정보 카드
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 제목 + 카테고리 배지
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // 메타 정보 칩 — 카테고리 / 거리 / 등록일
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(pin.title,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.neutral900)),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(pin.category,
-                                style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _MetaChip(icon: Icons.sell_rounded, label: pin.category, color: AppColors.primary, filled: true),
+                    if (dist != null)
+                      _MetaChip(icon: Icons.near_me_rounded, label: '현재 위치에서 $dist', color: AppColors.neutral600),
+                    _MetaChip(icon: Icons.schedule_rounded, label: _formatDate(pin.createdAt), color: AppColors.neutral600),
                   ],
                 ),
                 // 설명 (전체 표시, 줄임 없음)
                 if (pin.description.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Text(pin.description,
-                      style: const TextStyle(fontSize: 13, color: AppColors.neutral500, height: 1.6)),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(pin.description,
+                        style: const TextStyle(fontSize: 13.5, color: AppColors.neutral600, height: 1.6)),
+                  ),
                 ],
                 // 등급 정보
                 if (pin.ratings != null && pin.ratings!.isNotEmpty)
                   _PinRatingsDisplay(ratings: pin.ratings!, category: pin.category),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
                 // 액션 버튼
                 Row(
                   children: [
@@ -1217,6 +1188,166 @@ class _SavedPinBottomSheet extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 저장된 핀 바텀시트 — 사진 있는 경우 히어로 헤더
+// ──────────────────────────────────────────────
+class _PhotoHeader extends StatelessWidget {
+  final PinModel pin;
+  final VoidCallback onClose;
+  const _PhotoHeader({required this.pin, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: Stack(
+        children: [
+          Image.file(
+            File(pin.photoPath!),
+            width: double.infinity,
+            height: 240,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(height: 240, color: AppColors.primaryLight),
+          ),
+          // 하단 가독성을 위한 그라디언트 오버레이
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withValues(alpha: 0.0), Colors.black.withValues(alpha: 0.62)],
+                  stops: const [0.4, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12, left: 0, right: 0,
+            child: Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 14, right: 14,
+            child: GestureDetector(
+              onTap: onClose,
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), shape: BoxShape.circle),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 20, right: 20, bottom: 16,
+            child: Text(
+              pin.title,
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white, height: 1.25),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 저장된 핀 바텀시트 — 사진 없는 경우 아이콘형 헤더
+// ──────────────────────────────────────────────
+class _PlainHeader extends StatelessWidget {
+  final PinModel pin;
+  final VoidCallback onClose;
+  const _PlainHeader({required this.pin, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 14, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 16),
+              decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 5),
+                  child: Text(pin.title,
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.neutral900),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              GestureDetector(
+                onTap: onClose,
+                child: Container(
+                  width: 30, height: 30,
+                  margin: const EdgeInsets.only(top: 5),
+                  decoration: const BoxDecoration(color: AppColors.neutral100, shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, color: AppColors.neutral500, size: 16),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 저장된 핀 바텀시트 — 메타 정보 칩 (카테고리/거리/등록일)
+// ──────────────────────────────────────────────
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool filled;
+  const _MetaChip({required this.icon, required this.label, required this.color, this.filled = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: filled ? color.withValues(alpha: 0.12) : AppColors.neutral100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: filled ? color : AppColors.neutral500),
+          const SizedBox(width: 5),
+          Text(label,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: filled ? color : AppColors.neutral600)),
         ],
       ),
     );

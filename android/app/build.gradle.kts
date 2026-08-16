@@ -10,7 +10,7 @@ import java.io.FileInputStream
 
 val keyPropertiesFile = rootProject.file("key.properties")
 val keyProperties = Properties()
-keyProperties.load(FileInputStream(keyPropertiesFile))
+if (keyPropertiesFile.exists()) keyProperties.load(FileInputStream(keyPropertiesFile))
 
 val localPropertiesFile = rootProject.file("local.properties")
 val localProperties = Properties()
@@ -46,10 +46,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keyProperties["keyAlias"] as String
-            keyPassword = keyProperties["keyPassword"] as String
-            storeFile = file(keyProperties["storeFile"] as String)
-            storePassword = keyProperties["storePassword"] as String
+            keyAlias = keyProperties["keyAlias"] as String?
+            keyPassword = keyProperties["keyPassword"] as String?
+            storeFile = (keyProperties["storeFile"] as String?)?.let { file(it) }
+            storePassword = keyProperties["storePassword"] as String?
         }
     }
 
