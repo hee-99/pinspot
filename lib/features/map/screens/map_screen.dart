@@ -736,32 +736,9 @@ class _MapScreenState extends State<MapScreen> {
                 onCancel: _cancelNavigation,
               ),
             ),
-          // 핀 등록(카메라) 버튼 — 지도 하단 중앙에서 바로 사진 찍고 핀 등록
+          // 내 위치 버튼 — 우측 하단, 카메라 버튼 바로 위
           Positioned(
-            bottom: (_isNavigating || _navLoading) ? 220 : 160,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const CreatePinScreen())),
-                child: Container(
-                  width: 60, height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.40), blurRadius: 14, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 28),
-                ),
-              ),
-            ),
-          ),
-          // 내 위치 버튼
-          Positioned(
-            bottom: (_isNavigating || _navLoading) ? 220 : 160,
+            bottom: (_isNavigating || _navLoading) ? 234 : 104,
             right: 16,
             child: GestureDetector(
               onTap: _moveToMyLocation,
@@ -780,6 +757,26 @@ class _MapScreenState extends State<MapScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                       )
                     : const Icon(Icons.my_location_rounded, color: AppColors.primary, size: 22),
+              ),
+            ),
+          ),
+          // 핀 등록(카메라) 버튼 — 우측 하단 가장자리, 엄지로 바로 누를 수 있는 위치
+          Positioned(
+            bottom: (_isNavigating || _navLoading) ? 158 : 28,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CreatePinScreen())),
+              child: Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.40), blurRadius: 14, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 28),
               ),
             ),
           ),
