@@ -20,6 +20,7 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   UserModel? _user;
   int _sampleCount = 0;
+  int _otherCount = 0;
   bool _loading = true;
 
   @override
@@ -31,7 +32,11 @@ class _AdminScreenState extends State<AdminScreen> {
   Future<void> _load() async {
     final user = await AuthService.getUser();
     final count = await SampleDataService.sampleCount();
-    if (mounted) setState(() { _user = user; _sampleCount = count; _loading = false; });
+    final allPins = await PinService.getPins();
+    final otherCount = allPins.where((p) => !p.id.startsWith('sample_')).length;
+    if (mounted) {
+      setState(() { _user = user; _sampleCount = count; _otherCount = otherCount; _loading = false; });
+    }
   }
 
   void _snack(String msg) =>
@@ -49,6 +54,17 @@ class _AdminScreenState extends State<AdminScreen> {
     PinRefreshNotifier.instance.notifyPinAdded();
     await _load();
     if (mounted) _snack('샘플 핀 $removed개를 삭제했어요');
+  }
+
+  Future<void> _clearOtherPins() async {
+    final allPins = await PinService.getPins();
+    final others = allPins.where((p) => !p.id.startsWith('sample_')).toList();
+    for (final p in others) {
+      await PinService.deletePin(p.id);
+    }
+    PinRefreshNotifier.instance.notifyPinAdded();
+    await _load();
+    if (mounted) _snack('샘플 외 핀 ${others.length}개를 삭제했어요');
   }
 
   Future<void> _resetOnboarding() async {
@@ -116,6 +132,20 @@ class _AdminScreenState extends State<AdminScreen> {
                         label: '샘플 핀 전체 삭제',
                         color: const Color(0xFFC62828),
                         onTap: _clearSamplePins,
+                      ),
+                      const Divider(height: 1, indent: 20, endIndent: 20),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.pin_drop_outlined, color: AppColors.primary),
+                        title: const Text('샘플 외(테스트로 생성된) 핀 개수', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: Text('$_otherCount개',
+                            style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                      ),
+                      _ActionTile(
+                        icon: Icons.cleaning_services_outlined,
+                        label: '샘플 외 핀 전체 삭제',
+                        color: const Color(0xFFC62828),
+                        onTap: _clearOtherPins,
                       ),
                     ],
                   ),

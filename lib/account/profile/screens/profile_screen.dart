@@ -305,13 +305,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      isScrollControlled: true,
+      builder: (ctx) => Container(
         margin: const EdgeInsets.all(16),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
         decoration: BoxDecoration(
           color: _kCard,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -377,6 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 16),
           ],
+          ),
         ),
       ),
     );
@@ -1273,7 +1277,7 @@ class _MyMapTabState extends State<_MyMapTab> {
 
     final filtered = _filtered;
     const filterBarHeight = 47.0;
-    const placeChipsHeight = 116.0;
+    const placeChipsHeight = 128.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {

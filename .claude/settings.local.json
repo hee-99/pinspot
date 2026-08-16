@@ -367,7 +367,10 @@
       "Bash(echo \"exit:$?\")",
       "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 logcat -d)",
       "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 reboot)",
-      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe wait-for-device *)"
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe wait-for-device *)",
+      "Bash(/c/Users/user/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell run-as com.pinspot.app cat /data/data/com.pinspot.app/shared_prefs/FlutterSharedPreferences.xml)",
+      "Bash(printenv)",
+      "Bash(where gh *)"
     ]
   }
 }
